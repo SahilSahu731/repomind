@@ -2,8 +2,8 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { env } from "@/lib/env";
 
-const redisUrl = env.UPSTASH_REDIS_REST_URL;
-const redisToken = env.UPSTASH_REDIS_REST_TOKEN;
+const redisUrl = env.UPSTASH_REDIS_REST_URL ?? "";
+const redisToken = env.UPSTASH_REDIS_REST_TOKEN ?? "";
 
 const redis =
   redisUrl && redisToken

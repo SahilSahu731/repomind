@@ -57,32 +57,6 @@ export default function Home() {
         <div className="float-slow absolute bottom-[-9rem] left-[25%] h-80 w-80 rounded-full bg-[#dedffd]/60 blur-3xl" />
       </div>
 
-      <header className="reveal relative mx-auto flex w-full max-w-[1320px] items-center justify-between px-6 pb-8 pt-8 sm:px-10 lg:px-20">
-        <a href="#" className="text-[1.06rem] font-semibold tracking-tight text-[#201912]">
-          RepoMind <span className="text-[#8f7458]">Labs</span>
-        </a>
-        <nav className="hidden items-center gap-9 text-sm text-[#5f5346] md:flex">
-          <a href="#features" className="transition hover:text-[#201b16]">
-            Features
-          </a>
-          <a href="#segments" className="transition hover:text-[#201b16]">
-            Segments
-          </a>
-          <a href="#workflow" className="transition hover:text-[#201b16]">
-            Workflow
-          </a>
-          <a href="#pricing" className="transition hover:text-[#201b16]">
-            Pricing
-          </a>
-        </nav>
-        <a
-          href="#pricing"
-          className="rounded-full border border-[#ddcbb5] bg-white/95 px-4 py-2 text-sm font-medium shadow-sm transition hover:shadow-md"
-        >
-          Start Free
-        </a>
-      </header>
-
       <main className="relative mx-auto w-full max-w-[1320px] px-6 pb-24 sm:px-10 lg:px-20 lg:pb-32">
         <section className="grid items-start gap-16 pb-24 pt-10 lg:grid-cols-[1.02fr_0.98fr] lg:gap-14 lg:pt-16">
           <div className="reveal" style={{ animationDelay: "80ms" }}>
@@ -100,7 +74,7 @@ export default function Home() {
 
             <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
               <a
-                href="#pricing"
+                href="/login"
                 className="inline-flex h-12 items-center justify-center rounded-full bg-[#1f1a15] px-7 text-sm font-medium text-[#f8f2ea] transition hover:bg-[#17110a]"
               >
                 Analyze My First Repo
@@ -291,7 +265,7 @@ export default function Home() {
             </h2>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
               <a
-                href="#"
+                href="/login"
                 className="inline-flex h-12 items-center justify-center rounded-full bg-[#f6eadc] px-7 text-sm font-medium text-[#1f1a15] transition hover:bg-[#fff4e9]"
               >
                 Get Started Free
@@ -306,13 +280,6 @@ export default function Home() {
           </div>
         </section>
       </main>
-
-      <footer className="mx-auto w-full max-w-[1320px] px-6 pb-10 pt-6 text-xs text-[#7a6d5f] sm:px-10 lg:px-20">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p>RepoMind</p>
-          <p>Understand codebases faster, with structure and context.</p>
-        </div>
-      </footer>
     </div>
   );
 }

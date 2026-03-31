@@ -7,6 +7,10 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { isGitHubAuthProfile } from "@/types/auth";
 
+if (!env.GITHUB_CLIENT_ID || !env.GITHUB_CLIENT_SECRET) {
+  throw new Error("GitHub OAuth credentials (GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET) are required");
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db),
   providers: [

@@ -8,9 +8,10 @@ export function getRedisClient(): Redis | null {
     return redisClient;
   }
 
-  const url = env.UPSTASH_REDIS_REST_URL;
-  const token = env.UPSTASH_REDIS_REST_TOKEN;
+  if (!env.UPSTASH_REDIS_REST_URL || !env.UPSTASH_REDIS_REST_TOKEN) {
+    return null;
+  }
 
-  redisClient = new Redis({ url, token });
+  redisClient = new Redis({ url: env.UPSTASH_REDIS_REST_URL, token: env.UPSTASH_REDIS_REST_TOKEN });
   return redisClient;
 }
