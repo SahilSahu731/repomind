@@ -190,7 +190,7 @@ UPSTASH_REDIS_REST_URL=
 UPSTASH_REDIS_REST_TOKEN=
 
 # ─── AI ───
-ANTHROPIC_API_KEY=
+GEMINI_API_KEY=
 
 # ─── Payments ───
 RAZORPAY_KEY_ID=
@@ -596,7 +596,7 @@ export const queue = new Queue("repo-analysis", {
 import Anthropic from "@anthropic-ai/sdk";
 
 export const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
+  apiKey: process.env.GEMINI_API_KEY!,
 });
 
 export const AI_CONFIG = {

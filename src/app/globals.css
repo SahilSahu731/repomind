@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fffdf8;
+  --foreground: #1f1a15;
 }
 
 @theme inline {
@@ -12,15 +12,61 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes floatDrift {
+  0% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-10px) scale(1.015);
+  }
+  100% {
+    transform: translateY(0px) scale(1);
+  }
+}
+
+@keyframes pulseBar {
+  0% {
+    width: 64%;
+  }
+  50% {
+    width: 83%;
+  }
+  100% {
+    width: 76%;
+  }
+}
+
+.reveal {
+  animation: fadeUp 720ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.stagger-in {
+  animation: fadeUp 760ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.float-slow {
+  animation: floatDrift 12s ease-in-out infinite;
+}
+
+.pulse-bar {
+  animation: pulseBar 2.8s ease-in-out infinite;
 }

@@ -42,6 +42,15 @@ Every error response must use one of these standardized codes:
 | `TIMEOUT` | 504 | Job exceeded max duration |
 | `PAYMENT_NOT_FOUND` | 404 | Payment record not found |
 | `INVALID_PLAN` | 400 | Plan type doesn't exist |
+| `INVALID_INPUT` | 400 | Request payload failed schema validation |
+| `EMAIL_IN_USE` | 409 | Email is already registered |
+| `SIGNUP_FAILED` | 500 | Signup operation failed |
+| `HEALTH_CHECK_FAILED` | 500 | Health endpoint failed to run checks |
+
+### Registry Source of Truth
+- All API route error responses must use `src/lib/errors.ts`.
+- Route handlers should call `getApiError(code, customMessage?)` and pass that to `fail()`.
+- Do not hardcode status/message pairs in routes.
 
 ## File Naming Conventions
 
@@ -152,7 +161,7 @@ npm run build         # Next.js build must complete
 ### Rules
 1. **Never commit** `.env.local` (in .gitignore)
 2. **Always commit** `.env.example` with all keys/no values
-3. **Validation**: Use `env.ts` to validate at build time
+3. **Validation**: `src/lib/env.ts` must be imported by runtime entry points (`layout.tsx`, `worker.ts`) so invalid env fails fast
 4. **Prefix**: Public vars must be `NEXT_PUBLIC_` (exposed to browser)
 
 ### Required Vars
