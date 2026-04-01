@@ -1,10 +1,15 @@
 import { Worker, type Job } from "bullmq";
 import fs from "node:fs";
 import path from "node:path";
-import type { Prisma } from "@prisma/client";
-import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { getRedisClient } from "@/lib/redis";
+import {
+  consumeCreditIfNeeded,
+  createAnalysisResult,
+  getRepoById,
+  updateJob as updateJobRecord,
+  updateRepo as updateRepoRecord,
+} from "@/lib/supabaseDb";
 import { analyzeWithAI } from "@/lib/services/analyzer";
 import { cleanupRepo, cloneRepo } from "@/lib/services/cloner";
 import { detectEntryPoints } from "@/lib/services/entryDetector";
@@ -26,10 +31,7 @@ const worker = new Worker(
   async (job: Job<AnalyzeJobData>) => {
     const { repoId, jobId, githubUrl, owner, repo, branch } = job.data;
     const targetDir = path.join("/tmp/repos", jobId);
-    const repoRecord = await db.repo.findUnique({
-      where: { id: repoId },
-      select: { userId: true },
-    });
+    const repoRecord = await getRepoById(repoId);
 
     if (!repoRecord) {
       throw new Error(`REPO_NOT_FOUND: Missing repo for job ${jobId}`);
@@ -70,32 +72,27 @@ const worker = new Worker(
         repo,
       });
 
-      await db.analysisResult.create({
-        data: {
-          repoId,
-          summary: aiResult.summary,
-          architecture: aiResult.architecture as unknown as Prisma.InputJsonValue,
-          fileTree: tree as unknown as Prisma.InputJsonValue,
-          dependencyGraph: depGraph as unknown as Prisma.InputJsonValue,
-          entryPoints: entryPoints as unknown as Prisma.InputJsonValue,
-          startGuide: aiResult.startGuide,
-          fileSummaries: aiResult.fileSummaries,
-          techStack: techStack as unknown as Prisma.InputJsonValue,
-        },
+      await createAnalysisResult({
+        repoId,
+        summary: aiResult.summary,
+        architecture: aiResult.architecture,
+        fileTree: tree,
+        dependencyGraph: depGraph,
+        entryPoints,
+        startGuide: aiResult.startGuide,
+        fileSummaries: aiResult.fileSummaries,
+        techStack,
       });
 
       await consumeCreditIfNeeded(repoRecord.userId);
 
-      await db.repo.update({
-        where: { id: repoId },
-        data: {
-          status: "COMPLETE",
-          totalFiles: stats.totalFiles,
-          totalLines: stats.totalLines,
-          defaultLanguage: stats.primaryLanguage,
-          analyzedAt: new Date(),
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        },
+      await updateRepoRecord(repoId, {
+        status: "COMPLETE",
+        totalFiles: stats.totalFiles,
+        totalLines: stats.totalLines,
+        defaultLanguage: stats.primaryLanguage,
+        analyzedAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       });
 
       await updateJob(jobId, "COMPLETED", 100, "complete");
@@ -139,19 +136,20 @@ async function updateJob(
   step: string,
   error?: string
 ): Promise<void> {
-  await db.job.update({
-    where: { id: jobId },
-    data: {
-      status,
-      progress,
-      currentStep: step,
-      ...(status === "PROCESSING" && !error ? { startedAt: new Date() } : {}),
-      ...(status === "COMPLETED" || status === "FAILED"
-        ? { completedAt: new Date() }
-        : {}),
-      ...(error ? { errorLog: error } : {}),
-    },
+  await updateJobInStore(jobId, {
+    status,
+    progress,
+    currentStep: step,
+    ...(status === "PROCESSING" && !error ? { startedAt: new Date().toISOString() } : {}),
+    ...(status === "COMPLETED" || status === "FAILED"
+      ? { completedAt: new Date().toISOString() }
+      : {}),
+    ...(error ? { errorLog: error } : {}),
   });
+}
+
+async function updateJobInStore(jobId: string, updates: Record<string, unknown>): Promise<void> {
+  await updateJobRecord(jobId, updates);
 }
 
 async function updateRepo(
@@ -159,42 +157,12 @@ async function updateRepo(
   status: "QUEUED" | "CLONING" | "PARSING" | "ANALYZING" | "COMPLETE" | "FAILED",
   error?: string
 ): Promise<void> {
-  await db.repo.update({
-    where: { id: repoId },
-    data: {
-      status,
-      ...(error ? { errorMessage: error } : {}),
-    },
+  await updateRepoInStore(repoId, {
+    status,
+    ...(error ? { errorMessage: error } : {}),
   });
 }
 
-async function consumeCreditIfNeeded(userId: string): Promise<void> {
-  await db.$transaction(async (tx) => {
-    const user = await tx.user.findUnique({
-      where: { id: userId },
-      select: { id: true, plan: true },
-    });
-
-    if (!user) {
-      throw new Error("UNAUTHORIZED: User not found for credit consumption");
-    }
-
-    if (user.plan !== "FREE") {
-      return;
-    }
-
-    const result = await tx.user.updateMany({
-      where: {
-        id: userId,
-        creditsRemaining: { gt: 0 },
-      },
-      data: {
-        creditsRemaining: { decrement: 1 },
-      },
-    });
-
-    if (result.count === 0) {
-      throw new Error("CREDITS_EXHAUSTED: No credits remaining for analysis");
-    }
-  });
+async function updateRepoInStore(repoId: string, updates: Record<string, unknown>): Promise<void> {
+  await updateRepoRecord(repoId, updates);
 }

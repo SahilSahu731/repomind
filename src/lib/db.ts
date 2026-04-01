@@ -1,15 +1,12 @@
-import { PrismaClient } from "@prisma/client";
-
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
-
-export const db =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
-  });
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = db;
-}
+// Prisma has been removed from runtime usage. Keep this module as a guardrail so
+// any stale imports fail with a clear migration message.
+export const db = new Proxy(
+  {},
+  {
+    get() {
+      throw new Error(
+        "Prisma client is no longer available. Use Supabase helpers from src/lib/supabaseDb.ts"
+      );
+    },
+  }
+);

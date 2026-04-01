@@ -1,4 +1,4 @@
-import type { JobStatus, RepoStatus } from "@prisma/client";
+import type { JobStatus, RepoStatus } from "@/lib/supabaseDb";
 
 export interface FileNode {
   path: string;

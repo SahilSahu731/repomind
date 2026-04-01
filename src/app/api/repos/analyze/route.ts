@@ -2,10 +2,10 @@ import { getServerSession } from "next-auth";
 import { nanoid } from "nanoid";
 import { authOptions } from "@/lib/auth";
 import { fail, ok } from "@/lib/api";
-import { db } from "@/lib/db";
 import { getApiError } from "@/lib/errors";
 import { enqueueAnalyzeRepoJob } from "@/lib/queue";
 import { limitAnalyze } from "@/lib/ratelimit";
+import { createJob, createRepo, getRepoByGithubUrlAndBranch, getUserById } from "@/lib/supabaseDb";
 import { analyzeSchema } from "@/lib/validations/repo";
 
 function parseGitHubUrl(url: string): { owner: string; repo: string; branch: string } {
@@ -42,10 +42,52 @@ export async function POST(req: Request) {
 
   const { owner, repo, branch } = parseGitHubUrl(parsed.data.githubUrl);
 
-  const user = await db.user.findUnique({ where: { id: session.user.id } });
+  const user = await getUserById(session.user.id);
   if (!user) {
-    const error = getApiError("UNAUTHORIZED");
-    return fail(error.code, error.message, error.status);
+    const fallbackUser = {
+      id: session.user.id,
+      plan: session.user.plan,
+      creditsRemaining: session.user.creditsRemaining,
+    };
+
+    if (fallbackUser.plan === "FREE" && fallbackUser.creditsRemaining <= 0) {
+      const creditError = getApiError("CREDITS_EXHAUSTED");
+      return fail(creditError.code, creditError.message, creditError.status);
+    }
+
+    const success = await limitAnalyze(`user:${fallbackUser.id}`, fallbackUser.plan !== "FREE");
+    if (!success) {
+      const limitError = getApiError("RATE_LIMITED");
+      return fail(limitError.code, limitError.message, limitError.status);
+    }
+
+    const repoRow = await createRepo({
+      userId: fallbackUser.id,
+      githubUrl: parsed.data.githubUrl,
+      owner,
+      name: repo,
+      branch,
+      status: "QUEUED",
+      shareSlug: nanoid(10),
+    });
+
+    const jobRow = await createJob({
+      repoId: repoRow.id,
+      status: "QUEUED",
+      progress: 0,
+      currentStep: "queued",
+    });
+
+    await enqueueAnalyzeRepoJob({
+      repoId: repoRow.id,
+      jobId: jobRow.id,
+      githubUrl: parsed.data.githubUrl,
+      owner,
+      repo,
+      branch,
+    });
+
+    return ok({ jobId: jobRow.id, repoId: repoRow.id }, 202);
   }
 
   if (user.plan === "FREE" && user.creditsRemaining <= 0) {
@@ -53,16 +95,14 @@ export async function POST(req: Request) {
     return fail(error.code, error.message, error.status);
   }
 
-  const cached = await db.repo.findUnique({
-    where: {
-      githubUrl_branch: {
-        githubUrl: parsed.data.githubUrl,
-        branch,
-      },
-    },
-  });
+  const cached = await getRepoByGithubUrlAndBranch(parsed.data.githubUrl, branch);
 
-  if (cached && cached.status === "COMPLETE" && cached.expiresAt && cached.expiresAt > new Date()) {
+  if (
+    cached &&
+    cached.status === "COMPLETE" &&
+    cached.expiresAt &&
+    new Date(cached.expiresAt) > new Date()
+  ) {
     return ok({ cached: true, repoId: cached.id });
   }
 
@@ -72,25 +112,21 @@ export async function POST(req: Request) {
     return fail(error.code, error.message, error.status);
   }
 
-  const repoRow = await db.repo.create({
-    data: {
-      userId: user.id,
-      githubUrl: parsed.data.githubUrl,
-      owner,
-      name: repo,
-      branch,
-      status: "QUEUED",
-      shareSlug: nanoid(10),
-    },
+  const repoRow = await createRepo({
+    userId: user.id,
+    githubUrl: parsed.data.githubUrl,
+    owner,
+    name: repo,
+    branch,
+    status: "QUEUED",
+    shareSlug: nanoid(10),
   });
 
-  const jobRow = await db.job.create({
-    data: {
-      repoId: repoRow.id,
-      status: "QUEUED",
-      progress: 0,
-      currentStep: "queued",
-    },
+  const jobRow = await createJob({
+    repoId: repoRow.id,
+    status: "QUEUED",
+    progress: 0,
+    currentStep: "queued",
   });
 
   await enqueueAnalyzeRepoJob({

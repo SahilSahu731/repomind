@@ -1,26 +1,41 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { FormEvent, useState } from "react";
 import { loginSchema } from "@/lib/validations/auth";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  function getSafeCallbackUrl(value: string | null): string {
+    if (!value) {
+      return "/user/dashboard";
+    }
+
+    if (value.startsWith("/login") || value.startsWith("/signup") || value === "/") {
+      return "/user/dashboard";
+    }
+
+    return value;
+  }
+
   const [callbackUrl] = useState(() => {
     if (typeof window === "undefined") {
-      return "/";
+      return "/user/dashboard";
     }
 
     const params = new URLSearchParams(window.location.search);
-    return params.get("callbackUrl") ?? "/";
+    return getSafeCallbackUrl(params.get("callbackUrl"));
   });
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const authError = searchParams.get("error");
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -110,6 +125,12 @@ export default function LoginPage() {
           {errorMessage && (
             <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
               {errorMessage}
+            </div>
+          )}
+
+          {authError === "Callback" && !errorMessage && (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+              OAuth callback failed. Check `DATABASE_URL` and `DIRECT_URL` in `.env` - they must be valid PostgreSQL URLs.
             </div>
           )}
 

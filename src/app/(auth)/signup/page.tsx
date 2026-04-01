@@ -49,7 +49,7 @@ export default function SignupPage() {
       redirect: false,
       email: parsed.data.email,
       password: parsed.data.password,
-      callbackUrl: "/",
+      callbackUrl: "/user/dashboard",
     });
 
     setIsSubmitting(false);
@@ -59,14 +59,14 @@ export default function SignupPage() {
       return;
     }
 
-    router.push(loginResult.url ?? "/");
+    router.push(loginResult.url ?? "/user/dashboard");
     router.refresh();
   }
 
   async function signupWithGithub() {
     setErrorMessage(null);
     setIsSubmitting(true);
-    await signIn("github", { callbackUrl: "/" });
+    await signIn("github", { callbackUrl: "/user/dashboard" });
   }
 
   return (

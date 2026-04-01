@@ -1,7 +1,6 @@
-import { hash } from "bcryptjs";
-import { db } from "@/lib/db";
 import { fail, ok } from "@/lib/api";
 import { getApiError } from "@/lib/errors";
+import { supabaseSignUpWithPassword } from "@/lib/supabaseAuth";
 import { signupSchema } from "@/lib/validations/auth";
 
 export async function POST(req: Request) {
@@ -19,26 +18,27 @@ export async function POST(req: Request) {
 
     const email = parsed.data.email.trim().toLowerCase();
 
-    const existing = await db.user.findUnique({ where: { email } });
-    if (existing) {
+    const result = await supabaseSignUpWithPassword(
+      parsed.data.name.trim(),
+      email,
+      parsed.data.password
+    );
+
+    if (result.error?.message?.toLowerCase().includes("already registered")) {
       const error = getApiError("EMAIL_IN_USE");
       return fail(error.code, error.message, error.status);
     }
 
-    const passwordHash = await hash(parsed.data.password, 12);
+    if (!result.user?.id) {
+      const error = getApiError("SIGNUP_FAILED", result.error?.message);
+      return fail(error.code, error.message, error.status);
+    }
 
-    const user = await db.user.create({
-      data: {
-        name: parsed.data.name.trim(),
-        email,
-        passwordHash,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-      },
-    });
+    const user = {
+      id: result.user.id,
+      name: parsed.data.name.trim(),
+      email,
+    };
 
     return ok({ user }, 201);
   } catch (error) {

@@ -1,8 +1,10 @@
-import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/pricing", "/about", "/share"];
+const PUBLIC_PATHS = ["/", "/pricing", "/about", "/share"];
+const AUTH_PATHS = ["/login", "/signup"];
+const USER_ROOT = "/user";
 const PUBLIC_API = ["/api/auth", "/api/webhooks", "/api/health"];
 
 export async function proxy(req: NextRequest) {
@@ -21,8 +23,23 @@ export async function proxy(req: NextRequest) {
   }
 
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const isAuthenticated = Boolean(token);
 
-  if (!token) {
+  if (isAuthenticated && AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+    return NextResponse.redirect(new URL("/user/dashboard", req.url));
+  }
+
+  if (AUTH_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+    return NextResponse.next();
+  }
+
+  if (!isAuthenticated) {
+    if (pathname.startsWith(USER_ROOT)) {
+      const loginUrl = new URL("/login", req.url);
+      loginUrl.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
     if (pathname.startsWith("/api/")) {
       return NextResponse.json(
         {
@@ -34,6 +51,10 @@ export async function proxy(req: NextRequest) {
     }
 
     return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  if (pathname === USER_ROOT) {
+    return NextResponse.redirect(new URL("/user/dashboard", req.url));
   }
 
   return NextResponse.next();

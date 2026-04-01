@@ -1,11 +1,11 @@
-import { db } from "@/lib/db";
+import { checkSupabaseDatabaseHealth } from "@/lib/supabaseDb";
 import { getRedisClient } from "@/lib/redis";
 import { ok, fail } from "@/lib/api";
 import { getApiError } from "@/lib/errors";
 
 export async function GET() {
   try {
-    await db.$queryRaw`SELECT 1`;
+    await checkSupabaseDatabaseHealth();
     const redis = getRedisClient();
     if (redis) {
       await redis.ping();
