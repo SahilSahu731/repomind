@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { FormEvent, useState } from "react";
 import { loginSchema } from "@/lib/validations/auth";
+import { AuthFrame } from "@/components/auth/AuthFrame";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -74,107 +74,83 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="relative min-h-screen flex items-center justify-center bg-white px-6">
-      <div className="w-full max-w-md">
-        <div className="mb-8">
-          <Link href="/" className="text-lg font-semibold tracking-tight text-gray-900">
-            RepoMind<span className="text-gray-400">.</span>
-          </Link>
+    <AuthFrame
+      title="Welcome back"
+      subtitle="Sign in to continue the repo analysis journey and pick up your workspace preview."
+      footerLink={{ href: "/signup", label: "Sign up", text: "Don’t have an account?" }}
+    >
+      <form className="space-y-5" onSubmit={onSubmit}>
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-foreground">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="mt-2 w-full rounded-2xl border border-border bg-surface-2 px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-primary"
+            placeholder="you@example.com"
+          />
         </div>
 
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
-            Welcome back
-          </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Sign in to your account to continue
-          </p>
+          <label htmlFor="password" className="block text-sm font-medium text-foreground">
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="mt-2 w-full rounded-2xl border border-border bg-surface-2 px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-primary"
+            placeholder="Your password"
+          />
         </div>
 
-        <form className="mt-8 space-y-5" onSubmit={onSubmit}>
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-900">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-2 w-full px-4 py-2.5 text-sm text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-900 transition"
-              placeholder="you@example.com"
-            />
+        {errorMessage && (
+          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+            {errorMessage}
           </div>
+        )}
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-900">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-2 w-full px-4 py-2.5 text-sm text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-900 transition"
-              placeholder="Your password"
-            />
+        {authError === "Callback" && !errorMessage && (
+          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+            OAuth callback failed. Check DATABASE_URL and DIRECT_URL in .env.
           </div>
-
-          {errorMessage && (
-            <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-              {errorMessage}
-            </div>
-          )}
-
-          {authError === "Callback" && !errorMessage && (
-            <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-              OAuth callback failed. Check `DATABASE_URL` and `DIRECT_URL` in `.env` - they must be valid PostgreSQL URLs.
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full py-3 px-4 mt-2 bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 disabled:opacity-50 transition"
-          >
-            {isSubmitting ? "Signing in..." : "Sign in"}
-          </button>
-        </form>
-
-        <div className="mt-8 flex items-center gap-3">
-          <div className="flex-1 border-t border-gray-200" />
-          <span className="text-xs text-gray-500">or</span>
-          <div className="flex-1 border-t border-gray-200" />
-        </div>
+        )}
 
         <button
-          onClick={loginWithGithub}
+          type="submit"
           disabled={isSubmitting}
-          className="w-full mt-8 py-3 px-4 border border-gray-300 rounded-lg font-medium text-gray-900 hover:bg-gray-50 disabled:opacity-50 transition flex items-center justify-center gap-2"
+          className="w-full rounded-2xl bg-primary px-4 py-3 font-semibold text-background transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <svg
-            className="w-5 h-5"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path
-              fillRule="evenodd"
-              d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.868-.013-1.703-2.782.603-3.369-1.343-3.369-1.343-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.544 2.914 1.19.092-.926.35-1.557.636-1.914-2.22-.253-4.555-1.113-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0110 4.817a9.6 9.6 0 012.502.075c1.908-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C17.138 18.194 20 14.44 20 10.017 20 4.484 15.522 0 10 0z"
-              clipRule="evenodd"
-            />
-          </svg>
-          Continue with GitHub
+          {isSubmitting ? "Signing in..." : "Sign in"}
         </button>
+      </form>
 
-        <p className="mt-6 text-center text-sm text-gray-600">
-          Don&apos;t have an account?{" "}
-          <Link href="/signup" className="font-semibold text-gray-900 hover:underline">
-            Sign up
-          </Link>
-        </p>
+      <div className="my-8 flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs uppercase tracking-[0.14em] text-muted">or</span>
+        <div className="h-px flex-1 bg-border" />
       </div>
-    </main>
+
+      <button
+        onClick={loginWithGithub}
+        disabled={isSubmitting}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-surface-2 px-4 py-3 font-medium text-foreground transition hover:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+          <path
+            fillRule="evenodd"
+            d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.868-.013-1.703-2.782.603-3.369-1.343-3.369-1.343-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.544 2.914 1.19.092-.926.35-1.557.636-1.914-2.22-.253-4.555-1.113-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0110 4.817a9.6 9.6 0 012.502.075c1.908-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C17.138 18.194 20 14.44 20 10.017 20 4.484 15.522 0 10 0z"
+            clipRule="evenodd"
+          />
+        </svg>
+        Continue with GitHub
+      </button>
+    </AuthFrame>
   );
 }

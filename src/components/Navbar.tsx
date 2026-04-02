@@ -39,23 +39,23 @@ export function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[#ede0ce] bg-white/95 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-330 items-center justify-between px-6 py-4 sm:px-10 lg:px-20">
-        <Link href="/" className="text-[1.06rem] font-semibold tracking-tight text-[#201912]">
-          RepoMind <span className="text-[#8f7458]">Labs</span>
+        <Link href="/" className="text-[1.06rem] font-semibold tracking-tight text-[var(--foreground)]">
+          RepoMind <span className="text-[var(--secondary)]">Labs</span>
         </Link>
 
-        <nav className="hidden items-center gap-9 text-sm text-[#5f5346] md:flex">
-          <Link href="/#features" className="transition hover:text-[#201b16]">
+        <nav className="hidden items-center gap-9 text-sm text-[var(--muted)] md:flex">
+          <Link href="/#features" className="transition hover:text-[var(--foreground)]">
             Features
           </Link>
-          <Link href="/#segments" className="transition hover:text-[#201b16]">
+          <Link href="/#segments" className="transition hover:text-[var(--foreground)]">
             Segments
           </Link>
-          <Link href="/#workflow" className="transition hover:text-[#201b16]">
+          <Link href="/#workflow" className="transition hover:text-[var(--foreground)]">
             Workflow
           </Link>
-          <Link href="/#pricing" className="transition hover:text-[#201b16]">
+          <Link href="/#pricing" className="transition hover:text-[var(--foreground)]">
             Pricing
           </Link>
         </nav>
@@ -66,7 +66,7 @@ export function Navbar() {
               <button
                 type="button"
                 onClick={() => setIsOpen((value) => !value)}
-                className="group flex items-center gap-2 rounded-full border border-[#decab0] bg-[linear-gradient(145deg,#fffaf2_0%,#fff4e6_100%)] px-2 py-1.5 shadow-[0_10px_20px_-16px_rgba(44,24,5,0.7)] transition hover:shadow-[0_16px_28px_-20px_rgba(44,24,5,0.8)]"
+                className="group flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1.5 transition hover:bg-[var(--surface-3)]"
                 aria-label="Toggle user menu"
               >
                 {session.user.image ? (
@@ -74,31 +74,31 @@ export function Navbar() {
                   <img
                     src={session.user.image}
                     alt="User avatar"
-                    className="h-8 w-8 rounded-full border border-[#e2c9a9] object-cover"
+                    className="h-8 w-8 rounded-full border border-[var(--border)] object-cover"
                   />
                 ) : (
-                  <span className="grid h-8 w-8 place-items-center rounded-full bg-[#2b2219] text-xs font-semibold text-[#f7e8d6]">
+                  <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--surface-3)] text-xs font-semibold text-[var(--foreground)]">
                     {userInitial}
                   </span>
                 )}
-                <span className="hidden text-sm font-medium text-[#4a3c2f] sm:inline">
+                <span className="hidden text-sm font-medium text-[var(--foreground)] sm:inline">
                   {session.user.name ?? "Account"}
                 </span>
-                <ChevronDown className="h-4 w-4 text-[#7f6a52]" />
+                <ChevronDown className="h-4 w-4 text-[var(--muted)]" />
               </button>
 
               {isOpen && (
-                <div className="absolute right-0 mt-2 w-60 overflow-hidden rounded-2xl border border-[#e5d3bc] bg-white/95 p-2 shadow-[0_24px_40px_-28px_rgba(45,25,6,0.8)] backdrop-blur">
-                  <div className="rounded-xl bg-[#fff8ef] px-3 py-2">
-                    <p className="truncate text-sm font-semibold text-[#33261a]">
+                <div className="absolute right-0 mt-2 w-60 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-2 backdrop-blur">
+                  <div className="rounded-xl bg-[var(--surface-2)] px-3 py-2">
+                    <p className="truncate text-sm font-semibold text-[var(--foreground)]">
                       {session.user.name ?? "User"}
                     </p>
-                    <p className="truncate text-xs text-[#725f4a]">{session.user.email}</p>
+                    <p className="truncate text-xs text-[var(--muted)]">{session.user.email}</p>
                   </div>
 
                   <Link
                     href="/user/dashboard"
-                    className="mt-2 flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#3d3024] transition hover:bg-[#fff6ea]"
+                    className="mt-2 flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-[var(--foreground)] transition hover:bg-[var(--surface-2)]"
                     onClick={() => setIsOpen(false)}
                   >
                     <LayoutDashboard className="h-4 w-4" />
@@ -106,7 +106,7 @@ export function Navbar() {
                   </Link>
                   <Link
                     href="/user/settings"
-                    className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-[#3d3024] transition hover:bg-[#fff6ea]"
+                    className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-[var(--foreground)] transition hover:bg-[var(--surface-2)]"
                     onClick={() => setIsOpen(false)}
                   >
                     <Settings className="h-4 w-4" />
@@ -114,7 +114,7 @@ export function Navbar() {
                   </Link>
                   <button
                     onClick={handleLogout}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-[#6a2d24] transition hover:bg-[#fff1ec]"
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-rose-300 transition hover:bg-rose-500/10"
                   >
                     <LogOut className="h-4 w-4" />
                     Sign Out
@@ -126,13 +126,13 @@ export function Navbar() {
             <>
               <Link
                 href="/login"
-                className="hidden text-sm font-medium text-[#5f5346] transition hover:text-[#201b16] sm:inline"
+                className="hidden text-sm font-medium text-[var(--muted)] transition hover:text-[var(--foreground)] sm:inline"
               >
                 Sign In
               </Link>
               <Link
                 href="/signup"
-                className="rounded-full border border-[#ddcbb5] bg-white/95 px-4 py-2 text-sm font-medium transition hover:shadow-md"
+                className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-sm font-medium text-[var(--foreground)] transition hover:bg-[var(--surface-3)]"
               >
                 Start Free
               </Link>
