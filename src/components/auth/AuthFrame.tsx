@@ -14,7 +14,7 @@ interface AuthFrameProps {
 
 export function AuthFrame({ title, subtitle, children, footerLink }: AuthFrameProps) {
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_10%_0%,rgba(103,232,249,0.10)_0%,transparent_34%),radial-gradient(circle_at_90%_10%,rgba(246,193,119,0.09)_0%,transparent_30%),var(--background)] px-6 py-8 text-foreground sm:px-8 lg:px-10">
+    <main className="min-h-screen bg-background px-6 py-8 text-foreground sm:px-8 lg:px-10">
       <div className="mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-6xl gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <aside className="relative overflow-hidden rounded-4xl border border-border bg-[linear-gradient(180deg,var(--surface)_0%,var(--surface-2)_100%)] p-6 shadow-[0_30px_90px_-52px_rgba(0,0,0,0.8)] sm:p-8">
           <div className="absolute inset-0 pointer-events-none">

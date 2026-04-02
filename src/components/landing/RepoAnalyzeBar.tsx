@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { ArrowRight, Github, Loader2, Sparkles, Wand2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 function parseGitHubRepo(value: string) {
   const normalized = value.trim();
@@ -84,83 +83,73 @@ export function RepoAnalyzeBar() {
   }
 
   return (
-    <div className="rounded-[1.9rem] border border-border bg-[linear-gradient(160deg,var(--surface)_0%,var(--surface-2)_58%,rgba(103,232,249,0.07)_100%)] p-4 shadow-[0_32px_80px_-48px_rgba(0,0,0,0.8)] sm:p-5">
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-[1.45rem] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.03)_0%,rgba(255,255,255,0.01)_100%)] p-4 sm:p-5">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-secondary">
-            <Sparkles className="h-4 w-4" />
-            Repo entry point
-          </div>
+    <div className="rounded-4xl border border-border bg-[linear-gradient(180deg,var(--surface)_0%,var(--surface-2)_55%,rgba(139,92,246,0.08)_100%)] p-5 shadow-[0_32px_80px_-48px_rgba(0,0,0,0.8)] sm:p-6">
+      <div className="space-y-5">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-secondary">
+          <Sparkles className="h-4 w-4" />
+          Repo entry point
+        </div>
+
+        <div className="space-y-3 rounded-3xl border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.03)_0%,rgba(255,255,255,0.01)_100%)] p-4 sm:p-5">
           <label htmlFor="github-url" className="sr-only">
             GitHub repository URL
           </label>
-          <div className="mt-4 flex flex-col gap-3 rounded-[1.2rem] border border-border bg-surface-2 p-3 sm:flex-row sm:items-center">
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-surface-3 px-3 py-2 text-xs text-muted">
+          <div className="rounded-[1.4rem] border border-border bg-surface-2 p-3 sm:p-4">
+            <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-muted">
               <Github className="h-4 w-4 text-primary" />
-              github.com
+              github.com/
+              <span className="text-foreground">owner/repo</span>
             </div>
             <input
               id="github-url"
               value={githubUrl}
               onChange={(event) => setGithubUrl(event.target.value)}
-              placeholder="https://github.com/org/repo or /tree/main"
-              className="min-w-0 flex-1 bg-transparent px-1 py-2 text-sm text-foreground outline-none placeholder:text-muted"
+              placeholder="https://github.com/org/repo or https://github.com/org/repo/tree/main"
+              className="mt-3 w-full rounded-2xl border border-border bg-surface px-4 py-4 text-base text-foreground outline-none placeholder:text-muted sm:text-lg"
             />
             <button
               type="button"
               onClick={analyzeRepository}
               disabled={isSubmitting}
-              className={cn(
-                "inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-background transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
-              )}
+              className="mt-3 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-semibold text-background transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-              Analyze
+              Analyze repository
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
 
-          {error && <p className="mt-3 text-sm text-rose-300">{error}</p>}
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            {[
-              "Detects entry points",
-              "Finds risky modules",
-              "Builds graph instantly",
-              "Routes into workspace",
-            ].map((tag) => (
-              <span key={tag} className="rounded-full border border-border bg-surface-2 px-3 py-1 text-xs text-muted">
-                {tag}
-              </span>
-            ))}
-          </div>
+          {error && <p className="text-sm text-rose-300">{error}</p>}
         </div>
 
-        <div className="grid gap-3 rounded-[1.45rem] border border-border bg-surface p-4 sm:p-5">
-          <div className="rounded-2xl border border-border bg-[linear-gradient(135deg,var(--surface-2)_0%,var(--surface-3)_100%)] p-4">
-            <p className="text-xs uppercase tracking-[0.14em] text-secondary">Live preview</p>
-            <p className="mt-2 text-lg font-semibold text-foreground">
-              {parsedRepo ? `${parsedRepo.owner}/${parsedRepo.repo}` : "Waiting for a valid repo"}
-            </p>
-            <p className="mt-1 text-sm text-muted">
-              Branch: {parsedRepo?.branch ?? "main"} · Confidence score {previewScore}%
-            </p>
+        <div className="rounded-3xl border border-border bg-surface p-4 sm:p-5">
+          <p className="text-xs uppercase tracking-[0.14em] text-secondary">Live preview</p>
+          <p className="mt-2 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+            {parsedRepo ? `${parsedRepo.owner}/${parsedRepo.repo}` : "Waiting for a valid repo"}
+          </p>
+          <p className="mt-2 text-sm leading-7 text-muted">
+            Branch: {parsedRepo?.branch ?? "main"} · Confidence score {previewScore}%
+          </p>
+
+          <div className="mt-4 space-y-3">
+            {[
+              { label: "Files scanned", value: Math.max(120, githubUrl.length * 3) },
+              { label: "Signals extracted", value: parsedRepo ? 12 : 0 },
+              { label: "Preview state", value: parsedRepo ? "Ready" : "Waiting" },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="flex items-center justify-between rounded-2xl border border-border bg-surface-2 px-4 py-3 text-sm"
+              >
+                <span className="text-muted">{item.label}</span>
+                <span className="font-semibold text-foreground">{item.value}</span>
+              </div>
+            ))}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-border bg-surface-2 p-3">
-              <p className="text-xs uppercase tracking-[0.08em] text-muted">Files</p>
-              <p className="mt-2 text-2xl font-semibold text-foreground">{Math.max(120, githubUrl.length * 3)}</p>
-            </div>
-            <div className="rounded-2xl border border-border bg-surface-2 p-3">
-              <p className="text-xs uppercase tracking-[0.08em] text-muted">Signals</p>
-              <p className="mt-2 text-2xl font-semibold text-foreground">{parsedRepo ? 12 : 0}</p>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-border bg-surface-2 p-4 text-sm text-muted">
+          <p className="mt-4 rounded-2xl border border-border bg-surface-2 p-4 text-sm leading-7 text-muted">
             Preview: repo ingestion, dependency scan, graph build, and onboarding route creation.
-          </div>
+          </p>
         </div>
       </div>
     </div>
