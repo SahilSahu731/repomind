@@ -1,0 +1,4 @@
+/* Content script styles — minimal, since most UI is in Shadow DOM */
+#repomind-scan-button {
+  /* Host positioning handled in shadow DOM */
+}

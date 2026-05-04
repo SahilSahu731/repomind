@@ -72,7 +72,7 @@ export default function SignupPage() {
   return (
     <AuthFrame
       title="Create account"
-      subtitle="Join RepoMind and get your first repository preview into the workspace faster."
+      subtitle="Create your account to start analyzing repositories."
       footerLink={{ href: "/login", label: "Sign in", text: "Already have an account?" }}
     >
       <form className="space-y-5" onSubmit={onSubmit}>
@@ -86,7 +86,7 @@ export default function SignupPage() {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="mt-2 w-full rounded-2xl border border-border bg-surface-2 px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-primary"
+            className="mt-2 w-full rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-foreground"
             placeholder="Jane Doe"
           />
         </div>
@@ -101,7 +101,7 @@ export default function SignupPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-2 w-full rounded-2xl border border-border bg-surface-2 px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-primary"
+            className="mt-2 w-full rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-foreground"
             placeholder="jane@example.com"
           />
         </div>
@@ -116,13 +116,13 @@ export default function SignupPage() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-2 w-full rounded-2xl border border-border bg-surface-2 px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-primary"
+            className="mt-2 w-full rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-foreground"
             placeholder="Your password"
           />
         </div>
 
         {errorMessage && (
-          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+          <div className="rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-foreground">
             {errorMessage}
           </div>
         )}
@@ -130,7 +130,7 @@ export default function SignupPage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-2xl bg-primary px-4 py-3 font-semibold text-background transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-xl border border-border bg-foreground px-4 py-3 font-semibold text-background transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmitting ? "Creating account..." : "Create account"}
         </button>
@@ -145,7 +145,7 @@ export default function SignupPage() {
       <button
         onClick={signupWithGithub}
         disabled={isSubmitting}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-surface-2 px-4 py-3 font-medium text-foreground transition hover:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface-2 px-4 py-3 font-medium text-foreground transition hover:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
           <path

@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "RepoMind — AI GitHub Repo Analyzer",
+  "version": "0.1.0",
+  "description": "Understand any GitHub repository in seconds. One-click AI analysis with architecture maps, dependency graphs, onboarding guides, and conversational AI.",
+  "permissions": [
+    "activeTab",
+    "sidePanel",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://github.com/*"
+  ],
+  "action": {
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    },
+    "default_title": "RepoMind — Scan this repo"
+  },
+  "side_panel": {
+    "default_path": "panel/index.html"
+  },
+  "background": {
+    "service_worker": "background/worker.ts"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*"],
+      "js": ["content/detector.ts"],
+      "css": ["content/styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}

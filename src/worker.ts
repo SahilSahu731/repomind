@@ -16,6 +16,7 @@ import { detectEntryPoints } from "@/lib/services/entryDetector";
 import { buildDependencyGraph } from "@/lib/services/graphBuilder";
 import { walkDirectory } from "@/lib/services/parser";
 import { detectTechStack } from "@/lib/services/techDetector";
+import { calculateContributionScore } from "@/lib/services/contributionScore";
 
 interface AnalyzeJobData {
   repoId: string;
@@ -72,6 +73,15 @@ const worker = new Worker(
         repo,
       });
 
+      // Calculate Contribution Readiness Score
+      const filePaths = flatFiles.map((f: { path: string }) => f.path);
+      const contributionScore = calculateContributionScore({
+        fileTree: filePaths,
+        readmeContent: readme,
+        languages: techStack.languages,
+        frameworks: techStack.frameworks,
+      });
+
       await createAnalysisResult({
         repoId,
         summary: aiResult.summary,
@@ -82,6 +92,7 @@ const worker = new Worker(
         startGuide: aiResult.startGuide,
         fileSummaries: aiResult.fileSummaries,
         techStack,
+        contributionScore,
       });
 
       await consumeCreditIfNeeded(repoRecord.userId);

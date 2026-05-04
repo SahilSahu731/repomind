@@ -76,7 +76,7 @@ export default function LoginPage() {
   return (
     <AuthFrame
       title="Welcome back"
-      subtitle="Sign in to continue the repo analysis journey and pick up your workspace preview."
+      subtitle="Sign in to continue with your repository workspace."
       footerLink={{ href: "/signup", label: "Sign up", text: "Don’t have an account?" }}
     >
       <form className="space-y-5" onSubmit={onSubmit}>
@@ -90,7 +90,7 @@ export default function LoginPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-2 w-full rounded-2xl border border-border bg-surface-2 px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-primary"
+            className="mt-2 w-full rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-foreground"
             placeholder="you@example.com"
           />
         </div>
@@ -105,27 +105,27 @@ export default function LoginPage() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-2 w-full rounded-2xl border border-border bg-surface-2 px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-primary"
+            className="mt-2 w-full rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-foreground"
             placeholder="Your password"
           />
         </div>
 
         {errorMessage && (
-          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+          <div className="rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-foreground">
             {errorMessage}
           </div>
         )}
 
         {authError === "Callback" && !errorMessage && (
-          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-            OAuth callback failed. Check DATABASE_URL and DIRECT_URL in .env.
+          <div className="rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-foreground">
+            OAuth callback failed. Verify NEXTAUTH_URL, NEXTAUTH_SECRET, and GitHub OAuth callback URL configuration.
           </div>
         )}
 
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-2xl bg-primary px-4 py-3 font-semibold text-background transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-xl border border-border bg-foreground px-4 py-3 font-semibold text-background transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmitting ? "Signing in..." : "Sign in"}
         </button>
@@ -140,7 +140,7 @@ export default function LoginPage() {
       <button
         onClick={loginWithGithub}
         disabled={isSubmitting}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-surface-2 px-4 py-3 font-medium text-foreground transition hover:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface-2 px-4 py-3 font-medium text-foreground transition hover:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
           <path
