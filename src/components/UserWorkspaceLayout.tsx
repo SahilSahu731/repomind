@@ -4,19 +4,16 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
+  ArrowUpRight,
   BarChart3,
-  BriefcaseBusiness,
-  Bell,
-  ChevronLeft,
-  ChevronRight,
   CircleUserRound,
   CreditCard,
   LayoutDashboard,
+  LogOut,
   Settings,
-  Sparkles,
-  UserRound,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { BrandMark } from "@/components/BrandMark";
 import { cn } from "@/lib/utils";
 import { useUserStore } from "@/lib/store/userStore";
 
@@ -24,30 +21,25 @@ interface UserWorkspaceLayoutProps {
   children: React.ReactNode;
 }
 
-interface UserNavItem {
-  href: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
-
-const NAV_ITEMS: UserNavItem[] = [
-  { href: "/user/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/user/profile", label: "Profile", icon: CircleUserRound },
-  { href: "/user/settings", label: "Settings", icon: Settings },
-  { href: "/user/activity", label: "Activity", icon: BarChart3 },
-  { href: "/user/billing", label: "Billing", icon: CreditCard },
+const NAV_ITEMS = [
+  { href: "/user/dashboard", label: "Dashboard", icon: LayoutDashboard, number: "01" },
+  { href: "/user/profile", label: "Profile", icon: CircleUserRound, number: "02" },
+  { href: "/user/activity", label: "Activity", icon: BarChart3, number: "03" },
+  { href: "/user/billing", label: "Billing", icon: CreditCard, number: "04" },
+  { href: "/user/settings", label: "Settings", icon: Settings, number: "05" },
 ];
 
 export default function UserWorkspaceLayout({ children }: UserWorkspaceLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const user = useUserStore((state) => state.user);
-  const [collapsed, setCollapsed] = useState(false);
 
   const userInitial = useMemo(() => {
     const source = user?.name || user?.email || "R";
     return source.charAt(0).toUpperCase();
   }, [user?.email, user?.name]);
+
+  const activePage = NAV_ITEMS.find((item) => item.href === pathname)?.label ?? "Workspace";
 
   async function onSignOut() {
     await signOut({ redirect: false });
@@ -56,36 +48,23 @@ export default function UserWorkspaceLayout({ children }: UserWorkspaceLayoutPro
   }
 
   return (
-    <div className="min-h-screen bg-transparent text-foreground">
-      <div className="flex min-h-screen w-full flex-col lg:flex-row">
-        <aside
-          className={cn(
-            "relative flex h-full flex-col border-r border-border bg-[linear-gradient(180deg,var(--surface)_0%,var(--surface-2)_100%)] p-4 text-foreground transition-all duration-300 lg:shrink-0",
-            collapsed ? "w-full lg:w-20" : "w-full lg:w-72"
-          )}
-        >
-          <button
-            type="button"
-            onClick={() => setCollapsed((value) => !value)}
-            className="absolute -right-3 top-6 hidden rounded-full border border-border bg-surface-2 p-1.5 text-foreground shadow lg:block"
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </button>
-
-          <div className="mb-6 flex items-center gap-3 rounded-2xl border border-border bg-white/3 px-2 py-3">
-            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-[linear-gradient(145deg,var(--primary)_0%,var(--primary-strong)_100%)] text-background">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            {!collapsed && (
-              <div>
-                <p className="text-sm font-semibold tracking-tight">RepoMind Orbit</p>
-                <p className="text-xs text-muted">User Workspace</p>
-              </div>
-            )}
+    <div className="marketing-theme min-h-svh bg-[#f5f0e5] text-[#292721]">
+      <div className="flex min-h-svh w-full flex-col lg:flex-row">
+        <aside className="border-b border-[#292721] bg-[#e8dfcf] lg:sticky lg:top-0 lg:flex lg:h-svh lg:w-64 lg:shrink-0 lg:flex-col lg:border-b-0 lg:border-r">
+          <div className="flex h-18 items-center justify-between border-b border-[#292721] px-5 lg:h-22 lg:px-7">
+            <Link href="/" className="flex items-center gap-2.5 text-base font-semibold tracking-[-.025em]">
+              <BrandMark className="h-7 w-7 text-[#d75c3f]" />
+              RepoMind
+            </Link>
+            <span className="font-mono text-[8px] uppercase tracking-[.16em] text-[#6d675f] lg:hidden">
+              {activePage}
+            </span>
           </div>
 
-          <nav className="flex-1 space-y-1.5">
+          <nav aria-label="Workspace navigation" className="flex overflow-x-auto px-3 py-2 lg:flex-1 lg:flex-col lg:overflow-visible lg:px-4 lg:py-7">
+            <p className="mb-4 hidden px-3 font-mono text-[8px] uppercase tracking-[.18em] text-[#6d675f] lg:block">
+              Workspace index
+            </p>
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
@@ -95,95 +74,71 @@ export default function UserWorkspaceLayout({ children }: UserWorkspaceLayoutPro
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "group flex items-center rounded-2xl px-3 py-2.5 text-sm transition",
+                    "group flex shrink-0 items-center gap-2.5 px-3 py-2.5 text-sm transition lg:mb-1 lg:w-full",
                     isActive
-                      ? "bg-primary/20 text-foreground"
-                      : "text-muted hover:bg-white/6 hover:text-foreground"
+                      ? "bg-[#292721] text-[#f5f0e5]"
+                      : "text-[#5e5952] hover:bg-[#d9ceba] hover:text-[#292721]"
                   )}
                 >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {!collapsed && <span className="ml-3">{item.label}</span>}
+                  <Icon className="h-3.5 w-3.5 shrink-0" />
+                  <span>{item.label}</span>
+                  <span className={cn("ml-auto hidden font-mono text-[8px] lg:block", isActive ? "text-[#d97757]" : "text-[#8a8378]")}>{item.number}</span>
                 </Link>
               );
             })}
           </nav>
 
-          <div className="mt-4 rounded-2xl border border-border bg-white/4 p-3">
+          <div className="hidden border-t border-[#292721] p-5 lg:block">
+            <div className="mb-5 border-l-2 border-[#d75c3f] pl-3">
+              <p className="font-mono text-[8px] uppercase tracking-[.16em] text-[#6d675f]">Current plan</p>
+              <div className="mt-1.5 flex items-end justify-between gap-3">
+                <p className="font-serif text-2xl leading-none">{user?.plan ?? "FREE"}</p>
+                <p className="text-xs text-[#6d675f]">{user?.creditsRemaining ?? "—"} credits</p>
+              </div>
+            </div>
+
             <div className="flex items-center gap-3">
               {user?.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={user.image}
-                  alt="User avatar"
-                  className="h-9 w-9 rounded-full border border-border object-cover"
-                />
+                <img src={user.image} alt="" className="h-9 w-9 rounded-full border border-[#292721] object-cover" />
               ) : (
-                <div className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-sm font-semibold">
+                <div className="grid h-9 w-9 place-items-center rounded-full bg-[#d75c3f] text-sm font-semibold text-white">
                   {userInitial}
                 </div>
               )}
-              {!collapsed && (
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">{user?.name ?? "User"}</p>
-                  <p className="truncate text-xs text-muted">{user?.email ?? "No email"}</p>
-                </div>
-              )}
-            </div>
-            {!collapsed && (
-              <button
-                type="button"
-                onClick={onSignOut}
-                className="mt-3 w-full rounded-xl border border-border px-3 py-2 text-xs font-semibold tracking-wide text-foreground transition hover:bg-white/8"
-              >
-                Sign Out
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{user?.name ?? "Account"}</p>
+                <p className="truncate text-[10px] text-[#6d675f]">{user?.email ?? "Loading session"}</p>
+              </div>
+              <button type="button" onClick={onSignOut} aria-label="Sign out" className="grid h-8 w-8 place-items-center border border-[#292721]/40 text-[#6d675f] transition hover:bg-[#292721] hover:text-[#f5f0e5]">
+                <LogOut className="h-3.5 w-3.5" />
               </button>
-            )}
+            </div>
           </div>
         </aside>
 
-        <section className="flex min-h-screen flex-col">
-          <header className="border-b border-border bg-surface/90 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold tracking-[0.12em] text-secondary uppercase">User Workspace</p>
-                <h1 className="truncate text-lg font-semibold tracking-tight text-foreground">
-                  {NAV_ITEMS.find((item) => item.href === pathname)?.label ?? "Workspace"}
-                </h1>
+        <section className="min-w-0 flex-1">
+          <header className="sticky top-0 z-40 hidden h-22 items-center justify-between border-b border-[#292721] bg-[#f5f0e5]/95 px-8 backdrop-blur-md lg:flex xl:px-12">
+            <div>
+              <p className="font-mono text-[8px] uppercase tracking-[.18em] text-[#6d675f]">RepoMind / User workspace</p>
+              <h1 className="mt-1 font-serif text-2xl tracking-[-.035em]">{activePage}</h1>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="text-right">
+                <p className="text-xs font-medium">{user?.name ?? "Your workspace"}</p>
+                <p className="mt-0.5 font-mono text-[8px] uppercase tracking-[.13em] text-[#6d675f]">Read-only analysis</p>
               </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium text-secondary"
-                >
-                  <BriefcaseBusiness className="h-3.5 w-3.5" />
-                  Primary Workspace
-                </button>
-
-                <button
-                  type="button"
-                  className="rounded-full border border-border bg-surface-2 p-2 text-foreground transition hover:bg-surface-3"
-                  aria-label="Notifications"
-                >
-                  <Bell className="h-4 w-4" />
-                </button>
-
-                {user?.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={user.image}
-                    alt="User avatar"
-                    className="h-9 w-9 rounded-full border border-border object-cover"
-                  />
-                ) : (
-                  <div className="grid h-9 w-9 place-items-center rounded-full border border-border bg-surface-2 text-foreground">
-                    <UserRound className="h-4 w-4" />
-                  </div>
-                )}
-              </div>
+              <Link href="/" className="group inline-flex h-10 items-center gap-2 rounded-full border border-[#292721] px-4 text-xs font-medium transition hover:bg-[#292721] hover:text-[#f5f0e5]">
+                Visit site
+                <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </Link>
             </div>
           </header>
-          <div className="flex-1 bg-background/30 p-4 sm:p-6 lg:p-8">{children}</div>
+
+          <main className="relative min-h-[calc(100svh-7.5rem)] overflow-hidden lg:min-h-[calc(100svh-5.5rem)]">
+            <div className="marketing-grid pointer-events-none absolute inset-0 opacity-30" />
+            <div className="relative mx-auto w-full max-w-[92rem] p-5 sm:p-8 lg:p-10 xl:p-12">{children}</div>
+          </main>
         </section>
       </div>
     </div>

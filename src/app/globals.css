@@ -160,3 +160,63 @@ html {
 .pulse-bar {
   animation: pulseBar 2.8s ease-in-out infinite;
 }
+
+.dashboard-markdown > * + * {
+  margin-top: 0.85rem;
+}
+
+.dashboard-markdown h1,
+.dashboard-markdown h2,
+.dashboard-markdown h3 {
+  color: #292721;
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  margin-top: 1.5rem;
+}
+
+.dashboard-markdown h2 {
+  font-size: 1.55rem;
+}
+
+.dashboard-markdown h3 {
+  font-size: 1.25rem;
+}
+
+.dashboard-markdown ul,
+.dashboard-markdown ol {
+  padding-left: 1.25rem;
+}
+
+.dashboard-markdown ul {
+  list-style: disc;
+}
+
+.dashboard-markdown ol {
+  list-style: decimal;
+}
+
+.dashboard-markdown code {
+  border: 1px solid rgba(41, 39, 33, 0.24);
+  background: #e8dfcf;
+  color: #292721;
+  font-family: var(--font-geist-mono);
+  font-size: 0.82em;
+  padding: 0.12rem 0.3rem;
+}
+
+.dashboard-markdown pre {
+  overflow-x: auto;
+  border: 1px solid #292721;
+  background: #292721;
+  color: #f5f0e5;
+  padding: 1rem;
+}
+
+.dashboard-markdown pre code {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}

@@ -137,11 +137,17 @@ export function RepoAnalyzeBar() {
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || status === "loading"}
             className="group mt-4 flex h-14 w-full items-center justify-center gap-3 rounded-full bg-[#292721] px-6 text-sm font-medium text-[#f7f2e7] transition hover:bg-[#d75c3f] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {isSubmitting ? "Starting analysis" : status === "authenticated" ? "Analyze repository" : "Continue to analyze"}
+            {isSubmitting
+              ? "Starting analysis"
+              : status === "loading"
+                ? "Preparing workspace"
+                : status === "authenticated"
+                  ? "Analyze repository"
+                  : "Continue to analyze"}
             {!isSubmitting ? <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /> : null}
           </button>
         </div>
