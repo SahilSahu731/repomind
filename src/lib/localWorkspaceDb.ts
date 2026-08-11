@@ -285,6 +285,24 @@ export async function localGetLatestJobByRepoId(repoId: string): Promise<JobRow 
   );
 }
 
+export async function localGetLatestJobsByRepoIds(repoIds: string[]): Promise<JobRow[]> {
+  if (repoIds.length === 0) return [];
+
+  const workspace = await readConsistentWorkspace();
+  const requested = new Set(repoIds);
+  const latestByRepo = new Map<string, JobRow>();
+
+  for (const job of [...workspace.jobs].sort(
+    (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)
+  )) {
+    if (requested.has(job.repoId) && !latestByRepo.has(job.repoId)) {
+      latestByRepo.set(job.repoId, job);
+    }
+  }
+
+  return [...latestByRepo.values()];
+}
+
 export async function localGetJobById(jobId: string): Promise<JobRow | null> {
   const workspace = await readConsistentWorkspace();
   return workspace.jobs.find((job) => job.id === jobId) ?? null;

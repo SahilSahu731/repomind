@@ -9,6 +9,7 @@ import {
   localGetAnalysisResultByRepoId,
   localGetJobById,
   localGetLatestJobByRepoId,
+  localGetLatestJobsByRepoIds,
   localGetRepoByGithubUrlAndBranch,
   localGetRepoById,
   localGetRepoByIdForUser,
@@ -349,6 +350,29 @@ export async function getLatestJobByRepoId(repoId: string): Promise<JobRow | nul
   );
 
   return result.data[0] ?? null;
+}
+
+export async function getLatestJobsByRepoIds(repoIds: string[]): Promise<JobRow[]> {
+  if (repoIds.length === 0) return [];
+
+  if (shouldUseLocalWorkspaceDatabase()) {
+    return localGetLatestJobsByRepoIds(repoIds);
+  }
+
+  const ids = repoIds.map((repoId) => encode(repoId)).join(",");
+  const result = await supabaseRequestWithTableFallback<JobRow[]>(
+    "Job",
+    `?select=*&repoId=in.(${ids})&order=createdAt.desc`,
+    "GET"
+  );
+  const latestByRepo = new Map<string, JobRow>();
+  for (const job of result.data) {
+    if (!latestByRepo.has(job.repoId)) {
+      latestByRepo.set(job.repoId, job);
+    }
+  }
+
+  return [...latestByRepo.values()];
 }
 
 export async function getJobById(jobId: string): Promise<JobRow | null> {
