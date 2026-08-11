@@ -1,4 +1,8 @@
 import { env } from "@/lib/env";
+import {
+  localSignInWithPassword,
+  localSignUpWithPassword,
+} from "@/lib/localAuth";
 
 interface SupabaseAuthUser {
   id: string;
@@ -27,6 +31,26 @@ function getSupabaseAuthConfig(): { url: string; key: string } {
   }
 
   return { url, key };
+}
+
+function hasConfiguredSupabaseAuth(): boolean {
+  try {
+    const hostname = new URL(env.SUPABASE_URL).hostname;
+    const normalizedKey = env.SUPABASE_ANON_KEY.toLowerCase();
+
+    return (
+      hostname !== "example.supabase.co" &&
+      !hostname.startsWith("your-") &&
+      !normalizedKey.includes("placeholder") &&
+      !normalizedKey.startsWith("your_")
+    );
+  } catch {
+    return false;
+  }
+}
+
+function canUseLocalAuth(): boolean {
+  return env.NODE_ENV !== "production" && !hasConfiguredSupabaseAuth();
 }
 
 async function callSupabaseAuth(
@@ -59,6 +83,10 @@ async function callSupabaseAuth(
 }
 
 export async function supabaseSignInWithPassword(email: string, password: string) {
+  if (canUseLocalAuth()) {
+    return localSignInWithPassword(email, password);
+  }
+
   return callSupabaseAuth("token?grant_type=password", {
     email,
     password,
@@ -70,6 +98,10 @@ export async function supabaseSignUpWithPassword(
   email: string,
   password: string
 ) {
+  if (canUseLocalAuth()) {
+    return localSignUpWithPassword(name, email, password);
+  }
+
   return callSupabaseAuth("signup", {
     email,
     password,

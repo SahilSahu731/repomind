@@ -137,7 +137,7 @@ export function RepoAnalyzeBar() {
 
           <button
             type="submit"
-            disabled={isSubmitting || status === "loading"}
+            disabled={isSubmitting}
             className="group mt-4 flex h-14 w-full items-center justify-center gap-3 rounded-full bg-[#292721] px-6 text-sm font-medium text-[#f7f2e7] transition hover:bg-[#d75c3f] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
