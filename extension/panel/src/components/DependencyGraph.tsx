@@ -1,8 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import * as d3 from "d3";
 import type { AnalysisResult } from "../../../shared/types";
 
 type GraphData = AnalysisResult["dependencyGraph"];
+type GraphNode = GraphData["nodes"][number] & d3.SimulationNodeDatum;
+
+interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
+  source: string | GraphNode;
+  target: string | GraphNode;
+  type: string;
+}
 
 interface Props {
   graph: GraphData;
@@ -10,7 +17,6 @@ interface Props {
 
 export function DependencyGraph({ graph }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [selectedNode, setSelectedNode] = useState<string | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || graph.nodes.length === 0) return;
@@ -27,12 +33,12 @@ export function DependencyGraph({ graph }: Props) {
     const nodes = graph.nodes
       .sort((a, b) => b.inDegree + b.outDegree - (a.inDegree + a.outDegree))
       .slice(0, maxNodes)
-      .map((n) => ({ ...n }));
+      .map((n): GraphNode => ({ ...n }));
 
     const nodeIds = new Set(nodes.map((n) => n.id));
     const edges = graph.edges
       .filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target))
-      .map((e) => ({ ...e }));
+      .map((e): GraphLink => ({ ...e }));
 
     const svg = d3
       .select(container)
@@ -54,10 +60,10 @@ export function DependencyGraph({ graph }: Props) {
       ]);
 
     const simulation = d3
-      .forceSimulation<any>(nodes)
+      .forceSimulation<GraphNode>(nodes)
       .force(
         "link",
-        d3.forceLink<any, any>(edges).id((d: any) => d.id).distance(60)
+        d3.forceLink<GraphNode, GraphLink>(edges).id((d) => d.id).distance(60)
       )
       .force("charge", d3.forceManyBody().strength(-200))
       .force("center", d3.forceCenter(width / 2, height / 2))
@@ -78,16 +84,13 @@ export function DependencyGraph({ graph }: Props) {
       .data(nodes)
       .enter()
       .append("circle")
-      .attr("r", (d: any) => Math.max(4, Math.min(16, Math.sqrt(d.lines) / 4)))
-      .attr("fill", (d: any) => colorScale(d.directory))
+      .attr("r", (d) => Math.max(4, Math.min(16, Math.sqrt(d.lines) / 4)))
+      .attr("fill", (d) => colorScale(d.directory))
       .attr("stroke", "var(--bg-primary)")
       .attr("stroke-width", 1.5)
-      .style("cursor", "pointer")
-      .on("click", (_event: any, d: any) => {
-        setSelectedNode(d.id === selectedNode ? null : d.id);
-      })
+      .style("cursor", "grab")
       .call(
-        d3.drag<any, any>()
+        d3.drag<SVGCircleElement, GraphNode>()
           .on("start", (event, d) => {
             if (!event.active) simulation.alphaTarget(0.3).restart();
             d.fx = d.x;
@@ -105,23 +108,23 @@ export function DependencyGraph({ graph }: Props) {
       );
 
     // Tooltip on hover
-    node.append("title").text((d: any) => `${d.path}\n${d.lines} lines | ${d.inDegree} imports`);
+    node.append("title").text((d) => `${d.path}\n${d.lines} lines | ${d.inDegree} imports`);
 
     // Zoom
     svg.call(
-      d3.zoom<any, any>().scaleExtent([0.3, 5]).on("zoom", (event) => {
+      d3.zoom<SVGSVGElement, unknown>().scaleExtent([0.3, 5]).on("zoom", (event) => {
         g.attr("transform", event.transform);
       })
     );
 
     simulation.on("tick", () => {
       link
-        .attr("x1", (d: any) => d.source.x)
-        .attr("y1", (d: any) => d.source.y)
-        .attr("x2", (d: any) => d.target.x)
-        .attr("y2", (d: any) => d.target.y);
+        .attr("x1", (d) => (d.source as GraphNode).x ?? 0)
+        .attr("y1", (d) => (d.source as GraphNode).y ?? 0)
+        .attr("x2", (d) => (d.target as GraphNode).x ?? 0)
+        .attr("y2", (d) => (d.target as GraphNode).y ?? 0);
 
-      node.attr("cx", (d: any) => d.x).attr("cy", (d: any) => d.y);
+      node.attr("cx", (d) => d.x ?? 0).attr("cy", (d) => d.y ?? 0);
     });
 
     return () => {
@@ -152,7 +155,7 @@ export function DependencyGraph({ graph }: Props) {
       />
 
       <p style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", textAlign: "center" }}>
-        Drag to move nodes • Scroll to zoom • Click for details
+        Drag to move nodes • Scroll to zoom • Hover for details
       </p>
     </div>
   );

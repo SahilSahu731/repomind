@@ -62,7 +62,7 @@ export default function App() {
         }
       }
     );
-  }, []);
+  }, [setAnalysis, setCurrentRepo, setIsLoggedIn, setUser]);
 
   /* ─── Listen for messages from background ─── */
   useEffect(() => {
@@ -98,7 +98,7 @@ export default function App() {
 
     chrome.runtime.onMessage.addListener(handler);
     return () => chrome.runtime.onMessage.removeListener(handler);
-  }, []);
+  }, [setAnalysis, setCurrentRepo, setError, setIsAnalyzing, setIsLoggedIn, setProgress, setUser]);
 
   /* ─── Render ─── */
 

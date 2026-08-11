@@ -1,76 +1,49 @@
 import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
+import { BrandMark } from "@/components/BrandMark";
 
 export function Footer() {
   return (
-    <footer className="mt-auto border-t border-white/10 bg-[#0a0a0a] text-[#d4d4d8]">
-      <div className="mx-auto w-full max-w-330 px-8 py-16 sm:px-12 sm:py-20 lg:px-24 lg:py-24">
-        <div className="grid gap-14 lg:grid-cols-[1.35fr_1fr_1fr_1fr] lg:gap-12">
-          <section>
-            <Link href="/" className="text-base font-semibold tracking-tight text-white">
+    <footer id="footer" className="bg-[#1f1e1a] text-[#eee9de]">
+      <div className="mx-auto max-w-[90rem] px-6 pb-8 pt-16 sm:px-10 lg:px-16 lg:pt-20 xl:px-20">
+        <div className="grid gap-14 border-b border-white/20 pb-16 lg:grid-cols-[1.5fr_.75fr_.75fr]">
+          <div>
+            <Link href="/" className="inline-flex items-center gap-3 text-lg font-semibold tracking-[-.025em]">
+              <BrandMark className="h-8 w-8 text-[#d97757]" />
               RepoMind
             </Link>
-            <p className="mt-5 max-w-[36ch] text-sm leading-7 text-zinc-400">
-              Repository intelligence for product and engineering teams. Analyze structure,
-              uncover risk, and onboard faster.
+            <p className="mt-6 max-w-md font-serif text-3xl leading-[1.12] tracking-[-.03em] text-[#eee9de] sm:text-4xl">
+              Make an unfamiliar codebase feel navigable.
             </p>
-            <p className="mt-7 text-xs uppercase tracking-[0.12em] text-zinc-500">
-              Built for serious teams
-            </p>
-          </section>
+          </div>
 
-          <section>
-            <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">Product</h2>
-            <ul className="mt-5 space-y-3.5 text-sm text-zinc-400">
+          <div>
+            <h2 className="font-mono text-[9px] uppercase tracking-[.18em] text-[#918c83]">Explore</h2>
+            <ul className="mt-5 space-y-3.5 text-sm text-[#c9c3b8]">
+              <li><Link href="/#product" className="transition hover:text-white">Product</Link></li>
+              <li><Link href="/#workflow" className="transition hover:text-white">How it works</Link></li>
+              <li><Link href="/#pricing" className="transition hover:text-white">Pricing</Link></li>
+              <li><Link href="/#analyze" className="transition hover:text-white">Analyze a repository</Link></li>
+            </ul>
+          </div>
+
+          <div>
+            <h2 className="font-mono text-[9px] uppercase tracking-[.18em] text-[#918c83]">Workspace</h2>
+            <ul className="mt-5 space-y-3.5 text-sm text-[#c9c3b8]">
+              <li><Link href="/signup" className="transition hover:text-white">Create account</Link></li>
+              <li><Link href="/login" className="transition hover:text-white">Sign in</Link></li>
               <li>
-                <Link href="/#try" className="transition hover:text-white">Analyze Repo</Link>
-              </li>
-              <li>
-                <Link href="/#flow" className="transition hover:text-white">How It Works</Link>
-              </li>
-              <li>
-                <Link href="/user/dashboard" className="transition hover:text-white">Workspace</Link>
+                <Link href="/api/health" className="inline-flex items-center gap-1.5 transition hover:text-white">
+                  API health <ArrowUpRight className="h-3 w-3" />
+                </Link>
               </li>
             </ul>
-          </section>
-
-          <section>
-            <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">Resources</h2>
-            <ul className="mt-5 space-y-3.5 text-sm text-zinc-400">
-              <li>
-                <Link href="/signup" className="transition hover:text-white">Get Started</Link>
-              </li>
-              <li>
-                <Link href="/login" className="transition hover:text-white">Sign In</Link>
-              </li>
-              <li>
-                <Link href="/api/health" className="transition hover:text-white">System Status</Link>
-              </li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">Company</h2>
-            <ul className="mt-5 space-y-3.5 text-sm text-zinc-400">
-              <li>
-                <Link href="#" className="transition hover:text-white">About</Link>
-              </li>
-              <li>
-                <Link href="#" className="transition hover:text-white">Contact</Link>
-              </li>
-              <li>
-                <Link href="#" className="transition hover:text-white">Privacy</Link>
-              </li>
-            </ul>
-          </section>
+          </div>
         </div>
 
-        <div className="mt-14 flex flex-col gap-4 border-t border-white/10 pt-7 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-zinc-500">© 2026 RepoMind. All rights reserved.</p>
-          <div className="flex items-center gap-5 text-xs text-zinc-500">
-            <Link href="#" className="transition hover:text-zinc-300">Terms</Link>
-            <Link href="#" className="transition hover:text-zinc-300">Privacy</Link>
-            <Link href="#" className="transition hover:text-zinc-300">Security</Link>
-          </div>
+        <div className="flex flex-col gap-3 pt-7 text-xs text-[#918c83] sm:flex-row sm:items-center sm:justify-between">
+          <p>© 2026 RepoMind. Repository intelligence for engineering teams.</p>
+          <p>Public GitHub repositories only.</p>
         </div>
       </div>
     </footer>

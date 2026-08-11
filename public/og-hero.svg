@@ -1,13 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <rect width="1200" height="630" fill="#071026" />
-  <g transform="translate(80,90)">
-    <text x="0" y="48" fill="#e8e8ea" font-family="Inter, Arial, sans-serif" font-size="44" font-weight="700">RepoMind</text>
-    <text x="0" y="104" fill="#9aa0a6" font-family="Inter, Arial, sans-serif" font-size="28">Turn any repo URL into architecture intelligence.</text>
+  <rect width="1200" height="630" fill="#F5F0E5"/>
+  <path d="M0 110h1200M0 520h1200M720 0v630" stroke="#292721" stroke-opacity=".16"/>
+  <g transform="translate(76 70)" fill="#D75C3F">
+    <path d="M0 0h26v26H0zM36 0h26v26H36z" opacity=".5"/>
+    <path d="M0 36h26v26H0zM36 36h26v26H36z"/>
+    <path d="M26 12h10M12 26v10M50 26v10M26 50h10" stroke="#D75C3F" stroke-width="5"/>
   </g>
-  <g transform="translate(720,140)">
-    <rect x="0" y="0" width="420" height="260" rx="12" fill="#0f1724" />
-    <circle cx="60" cy="60" r="34" fill="#22d3ee" opacity="0.18" />
-    <rect x="120" y="36" width="240" height="14" rx="7" fill="#111827" />
-    <rect x="120" y="64" width="180" height="14" rx="7" fill="#0b1220" />
+  <g transform="translate(76 205)">
+    <text x="0" y="0" fill="#292721" font-family="Georgia, serif" font-size="78" letter-spacing="-4">Understand the code</text>
+    <text x="0" y="88" fill="#292721" font-family="Georgia, serif" font-size="78" letter-spacing="-4">before you change it.</text>
+    <text x="0" y="148" fill="#6D675F" font-family="Arial, sans-serif" font-size="22">Architecture maps, dependency graphs, and onboarding guidance from one repo URL.</text>
   </g>
+  <g transform="translate(770 110)">
+    <rect width="360" height="410" rx="28" fill="#292721"/>
+    <g stroke="#8B877E" stroke-opacity=".65">
+      <path d="M62 210 138 105 212 160 299 79"/>
+      <path d="M62 210 146 310 212 160 291 287"/>
+      <path d="M146 310 291 287 312 198 299 79"/>
+    </g>
+    <circle cx="62" cy="210" r="28" fill="#D75C3F"/>
+    <circle cx="138" cy="105" r="18" fill="#F5F0E5"/>
+    <circle cx="146" cy="310" r="23" fill="#809177"/>
+    <circle cx="212" cy="160" r="38" fill="#F5F0E5"/>
+    <circle cx="291" cy="287" r="21" fill="#D75C3F"/>
+    <circle cx="299" cy="79" r="14" fill="#809177"/>
+    <circle cx="312" cy="198" r="26" fill="#F5F0E5"/>
+  </g>
+  <text x="76" y="575" fill="#292721" font-family="Arial, sans-serif" font-size="20" font-weight="700">RepoMind</text>
 </svg>

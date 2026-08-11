@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { StructuredData } from "@/components/StructuredData";
+import { siteConfig } from "@/config/site";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,24 +16,37 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RepoMind",
-  description:
-    "AI-powered repository analysis with architecture maps and onboarding guides.",
+  title: {
+    default: "RepoMind — Understand the code before you change it",
+    template: "%s · RepoMind",
+  },
+  description: siteConfig.description,
+  metadataBase: new URL(siteConfig.url),
+  applicationName: "RepoMind",
+  keywords: ["repository analysis", "codebase architecture", "dependency graph", "developer onboarding"],
+  openGraph: {
+    type: "website",
+    siteName: "RepoMind",
+    title: "RepoMind — Understand the code before you change it",
+    description: siteConfig.description,
+    url: siteConfig.url,
+    images: [
+      {
+        url: "/og-hero.svg",
+        width: 1200,
+        height: 630,
+        alt: "RepoMind repository intelligence",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "RepoMind — Understand the code before you change it",
+    description: siteConfig.description,
+    images: ["/og-hero.svg"],
+  },
 };
 
-export const openGraph = {
-  title: 'RepoMind — Repo architecture intelligence',
-  description: 'Turn a repository URL into an architecture map, onboarding route, and risk surface analysis.',
-  url: 'https://repomind.example',
-  images: [
-    {
-      url: '/og-hero.svg',
-      width: 1200,
-      height: 630,
-      alt: 'RepoMind Open Graph',
-    },
-  ],
-};
 
 
 export default function RootLayout({
@@ -45,6 +60,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background text-foreground">
+        <StructuredData />
         <Providers>{children}</Providers>
       </body>
     </html>

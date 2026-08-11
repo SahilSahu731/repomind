@@ -29,6 +29,8 @@ export function Header() {
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
         {isLoggedIn && user ? (
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-xs)" }}>
+            {/* This component runs in a Vite-built extension, where next/image is unavailable. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={user.image}
               alt={user.name}

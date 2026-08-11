@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { getApiError } from "@/lib/errors";
 import { enqueueAnalyzeRepoJob } from "@/lib/queue";
 import { limitAnalyze } from "@/lib/ratelimit";
-import { corsHeaders, corsOk, withCors } from "@/lib/cors";
+import { corsOk, withCors } from "@/lib/cors";
 import {
   createJob,
   createRepo,
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { owner, repo, branch, githubUrl, metadata } = body as {
+    const { owner, repo, branch, githubUrl } = body as {
       owner: string;
       repo: string;
       branch: string;

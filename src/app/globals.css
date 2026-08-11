@@ -4,7 +4,7 @@
   color-scheme: dark;
   --background: #0b0b0c;
   --foreground: #e8e8ea;
-  --muted: #a0a0a7;
+  --muted: #b0b3b8;
   --border: #252529;
   --surface: #121214;
   --surface-2: #17171a;
@@ -29,6 +29,7 @@
   --color-secondary-strong: var(--secondary-strong);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
 }
 
 body {
@@ -77,6 +78,47 @@ html {
     opacity: 1;
     transform: translateY(0);
   }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .stagger-in,
+  .float-slow,
+  .pulse-bar {
+    animation: none !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: rgba(215, 92, 63, 0.28);
+}
+
+.marketing-theme {
+  --background: #f5f0e5;
+  --foreground: #292721;
+  --muted: #6d675f;
+  --border: #292721;
+  --surface: #f7f2e7;
+  --surface-2: #eae2d2;
+  --surface-3: #ded4c1;
+  --primary: #d75c3f;
+  --primary-strong: #c94f34;
+  --secondary: #667a60;
+  --secondary-strong: #52664d;
+  color-scheme: light;
+  width: 100vw;
+}
+
+.marketing-grid {
+  background-image:
+    linear-gradient(to right, rgba(41, 39, 33, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(41, 39, 33, 0.08) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(to bottom, black 0%, transparent 88%);
 }
 
 @keyframes floatDrift {

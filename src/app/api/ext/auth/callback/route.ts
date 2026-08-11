@@ -1,9 +1,8 @@
-import type { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { env } from "@/lib/env";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   // This is the callback URL after successful NextAuth sign-in.
   // The user will already have a session cookie set by NextAuth.
   // We create a simple token (the session user's ID) and redirect

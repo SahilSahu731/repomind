@@ -1,7 +1,7 @@
 export const siteConfig = {
   name: "RepoMind",
   description:
-    "Understand any GitHub repository in under 60 seconds with AI architecture maps and onboarding guides.",
+    "Turn a public GitHub repository into an architecture map, dependency graph, contribution score, and onboarding guide.",
   url: process.env.NEXTAUTH_URL ?? "http://localhost:3000",
   links: {
     github: "https://github.com",

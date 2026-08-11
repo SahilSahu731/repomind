@@ -5,7 +5,7 @@
  * API communication, caching, and message routing.
  */
 
-import type { Message, RepoInfo, AnalysisProgress, AnalysisResult } from "../shared/types";
+import type { Message, RepoInfo, AnalysisProgress } from "../shared/types";
 import { API_BASE_URL } from "../shared/types";
 import { apiClient } from "./api";
 import { cache } from "./cache";

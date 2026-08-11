@@ -6,6 +6,7 @@ const PUBLIC_PATHS = ["/", "/pricing", "/about", "/share"];
 const AUTH_PATHS = ["/login", "/signup"];
 const USER_ROOT = "/user";
 const PUBLIC_API = ["/api/auth", "/api/webhooks", "/api/health"];
+const PUBLIC_METADATA = ["/robots.txt", "/sitemap.xml"];
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -18,7 +19,12 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith("/_next") || pathname.startsWith("/favicon")) {
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon") ||
+    PUBLIC_METADATA.includes(pathname) ||
+    /\.[a-zA-Z0-9]+$/.test(pathname)
+  ) {
     return NextResponse.next();
   }
 
@@ -50,7 +56,7 @@ export async function proxy(req: NextRequest) {
       );
     }
 
-    return NextResponse.redirect(new URL("/login", req.url));
+    return NextResponse.next();
   }
 
   if (pathname === USER_ROOT) {
