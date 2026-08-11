@@ -1,8 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
-import { StructuredData } from "@/components/StructuredData";
 import { siteConfig } from "@/config/site";
 
 const geistSans = Geist({
@@ -17,37 +16,50 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "RepoMind — Understand the code before you change it",
+    default: "RepoMind — Understand Any GitHub Codebase Faster",
     template: "%s · RepoMind",
   },
   description: siteConfig.description,
   metadataBase: new URL(siteConfig.url),
-  applicationName: "RepoMind",
-  keywords: ["repository analysis", "codebase architecture", "dependency graph", "developer onboarding"],
+  applicationName: siteConfig.name,
+  keywords: siteConfig.keywords,
+  authors: [{ name: siteConfig.name, url: siteConfig.url }],
+  creator: siteConfig.name,
+  publisher: siteConfig.name,
+  category: "technology",
+  classification: "Developer tools",
+  referrer: "origin-when-cross-origin",
+  formatDetection: { email: false, address: false, telephone: false },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
   openGraph: {
     type: "website",
-    siteName: "RepoMind",
-    title: "RepoMind — Understand the code before you change it",
+    siteName: siteConfig.name,
+    locale: siteConfig.locale,
+    title: "RepoMind — Understand Any GitHub Codebase Faster",
     description: siteConfig.description,
     url: siteConfig.url,
-    images: [
-      {
-        url: "/og-hero.svg",
-        width: 1200,
-        height: 630,
-        alt: "RepoMind repository intelligence",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "RepoMind — Understand the code before you change it",
+    title: "RepoMind — Understand Any GitHub Codebase Faster",
     description: siteConfig.description,
-    images: ["/og-hero.svg"],
   },
 };
 
-
+export const viewport: Viewport = {
+  themeColor: "#f5f0e5",
+  colorScheme: "light",
+};
 
 export default function RootLayout({
   children,
@@ -60,7 +72,6 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background text-foreground">
-        <StructuredData />
         <Providers>{children}</Providers>
       </body>
     </html>

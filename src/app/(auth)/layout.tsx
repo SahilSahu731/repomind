@@ -9,6 +9,7 @@ import { BrandMark } from "@/components/BrandMark";
 export const metadata: Metadata = {
   title: "Account access",
   description: "Sign in or create a RepoMind workspace to analyze public GitHub repositories.",
+  robots: { index: false, follow: false, nocache: true },
 };
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {

@@ -12,10 +12,12 @@ import {
   LandingUseCases,
 } from "@/components/landing/LandingExpandedSections";
 import { LandingMotion } from "@/components/landing/LandingMotion";
+import { StructuredData } from "@/components/StructuredData";
 
 export default function HomePage() {
   return (
     <div className="overflow-hidden">
+      <StructuredData />
       <LandingMotion />
       <LandingHero />
       <LandingProof />
