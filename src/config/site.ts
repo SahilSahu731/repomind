@@ -29,6 +29,7 @@ export const siteConfig = {
   ],
   links: {
     github: "https://github.com/SahilSahu731/repomind",
+    creator: "https://github.com/SahilSahu731",
   },
 };
 

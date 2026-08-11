@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, LayoutDashboard, LogOut, Menu, Settings, X } from "lucide-react";
+import { ChevronDown, LayoutDashboard, LogOut, Menu, Settings, Star, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
+import { siteConfig } from "@/config/site";
 
 const navLinks = [
   { href: "/#product", label: "Product" },
@@ -72,6 +73,16 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <a
+            href={siteConfig.links.github}
+            target="_blank"
+            rel="noreferrer"
+            title="Open GitHub to star RepoMind"
+            className="group hidden h-10 items-center gap-2 rounded-full border border-[#292721] px-3.5 text-xs font-semibold transition hover:bg-[#292721] hover:text-[#f5f0e5] sm:inline-flex"
+          >
+            <Star className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110 group-hover:fill-[#d75c3f] group-hover:text-[#d75c3f]" />
+            Star on GitHub
+          </a>
           {session?.user ? (
             <div className="relative" ref={dropdownRef}>
               <button
@@ -142,6 +153,16 @@ export function Navbar() {
                 {link.label}
               </Link>
             ))}
+            <a
+              href={siteConfig.links.github}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => setIsMobileOpen(false)}
+              className="group flex items-center justify-between border-b border-[#292721]/20 py-4 text-lg font-medium"
+            >
+              Star RepoMind on GitHub
+              <Star className="h-4 w-4 transition-transform group-hover:rotate-12 group-hover:scale-110 group-hover:fill-[#d75c3f] group-hover:text-[#d75c3f]" />
+            </a>
             {!session?.user ? (
               <div className="mt-5 flex gap-3">
                 <Link href="/login" className="flex h-12 flex-1 items-center justify-center rounded-full border border-[#292721] text-sm font-medium">Sign in</Link>

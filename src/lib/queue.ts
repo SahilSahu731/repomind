@@ -7,6 +7,7 @@ import {
 } from "@/lib/services/processAnalysisJob";
 
 let queue: Queue | null = null;
+let inlineQueue: Promise<void> = Promise.resolve();
 
 function getQueue(): Queue {
   if (!queue) {
@@ -30,11 +31,13 @@ export function getBullMqConnectionOptions(
 }
 
 export async function enqueueAnalyzeRepoJob(payload: AnalyzeRepoJobData): Promise<void> {
-  if (shouldUseLocalWorkspaceDatabase()) {
-    void processAnalyzeRepoJob(payload).catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : "Unknown analysis error";
-      console.error(`[analysis:${payload.jobId}] ${message}`);
-    });
+  if (shouldUseLocalWorkspaceDatabase() || env.ANALYSIS_EXECUTION_MODE === "inline") {
+    inlineQueue = inlineQueue
+      .then(() => processAnalyzeRepoJob(payload))
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : "Unknown analysis error";
+        console.error(`[analysis:${payload.jobId}] ${message}`);
+      });
     return;
   }
 

@@ -40,26 +40,61 @@ const globalLimiter =
       })
     : null;
 
-let warnedAboutDevelopmentBypass = false;
+interface MemoryWindow {
+  count: number;
+  resetsAt: number;
+}
 
-function allowDevelopmentWithoutRedis(): boolean {
-  if (env.NODE_ENV === "production") {
-    throw new Error(
-      "RATE_LIMIT_UNAVAILABLE: Configure UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN"
-    );
+const memoryWindows = new Map<string, MemoryWindow>();
+const maxMemoryWindows = 10_000;
+let warnedAboutMemoryFallback = false;
+
+function limitInMemory(key: string, maximum: number, windowMs: number): boolean {
+  const now = Date.now();
+  const existing = memoryWindows.get(key);
+
+  if (!existing || existing.resetsAt <= now) {
+    if (memoryWindows.size >= maxMemoryWindows) {
+      for (const [storedKey, window] of memoryWindows) {
+        if (window.resetsAt <= now) memoryWindows.delete(storedKey);
+      }
+
+      if (memoryWindows.size >= maxMemoryWindows) {
+        const oldestKey = memoryWindows.keys().next().value;
+        if (typeof oldestKey === "string") memoryWindows.delete(oldestKey);
+      }
+    }
+
+    memoryWindows.set(key, { count: 1, resetsAt: now + windowMs });
+    return true;
   }
 
-  if (!warnedAboutDevelopmentBypass) {
-    console.warn("Rate limiting is disabled outside production because Upstash is not configured.");
-    warnedAboutDevelopmentBypass = true;
+  if (existing.count >= maximum) {
+    return false;
   }
+
+  existing.count += 1;
+  memoryWindows.set(key, existing);
   return true;
+}
+
+function announceMemoryFallback(): void {
+  if (warnedAboutMemoryFallback) return;
+  console.warn(
+    "Upstash rate limiting is not configured; using a single-instance in-memory limiter."
+  );
+  warnedAboutMemoryFallback = true;
 }
 
 export async function limitAnalyze(userId: string, isPro: boolean): Promise<boolean> {
   const limiter = isPro ? proLimiter : freeLimiter;
   if (!limiter) {
-    return allowDevelopmentWithoutRedis();
+    announceMemoryFallback();
+    return limitInMemory(
+      `analyze:${isPro ? "pro" : "free"}:${userId}`,
+      isPro ? 30 : 3,
+      24 * 60 * 60 * 1000
+    );
   }
 
   const result = await limiter.limit(userId);
@@ -68,7 +103,8 @@ export async function limitAnalyze(userId: string, isPro: boolean): Promise<bool
 
 export async function limitGlobal(identifier: string): Promise<boolean> {
   if (!globalLimiter) {
-    return allowDevelopmentWithoutRedis();
+    announceMemoryFallback();
+    return limitInMemory(`global:${identifier}`, 100, 60 * 1000);
   }
 
   const result = await globalLimiter.limit(identifier);

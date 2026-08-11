@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
+import { siteConfig } from "@/config/site";
 
 export function Footer() {
   return (
@@ -51,6 +52,12 @@ export function Footer() {
 
         <div className="flex flex-col gap-3 pt-7 text-xs text-[#918c83] sm:flex-row sm:items-center sm:justify-between">
           <p>© 2026 RepoMind. Repository intelligence for engineering teams.</p>
+          <p>
+            Built by{" "}
+            <a href={siteConfig.links.creator} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[#c9c3b8] underline decoration-[#d97757] underline-offset-4 transition hover:text-white">
+              Sahil Sahu <ArrowUpRight className="h-3 w-3" />
+            </a>
+          </p>
           <p>Public GitHub repositories only.</p>
         </div>
       </div>
