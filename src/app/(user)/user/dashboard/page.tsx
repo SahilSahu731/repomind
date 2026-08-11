@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
@@ -7,6 +8,7 @@ import remarkGfm from "remark-gfm";
 import {
   Activity,
   AlertTriangle,
+  ArrowLeft,
   CircleCheckBig,
   Clock3,
   FileCode2,
@@ -18,11 +20,10 @@ import {
   Rocket,
   Scale,
   Server,
-  ShieldCheck,
 } from "lucide-react";
 import type { AnalysisResult } from "@/types";
 import type { JobRow, RepoRow } from "@/lib/supabaseDb";
-import { RepoAnalyzeBar } from "@/components/landing/RepoAnalyzeBar";
+import { RepositoryWorkspace } from "@/components/workspace/RepositoryWorkspace";
 
 interface RepoDetailsResponse {
   success: true;
@@ -59,6 +60,25 @@ function statusTone(status: string): string {
   return "border-[#d75c3f] bg-[#f0d9cf] text-[#8c3826]";
 }
 
+function analysisFailureMessage(repo: RepoRow, job: JobRow | null): string {
+  const detail = repo.errorMessage ?? job?.errorLog ?? "";
+
+  if (detail.includes("REPO_NOT_FOUND")) {
+    return "GitHub could not find this public repository. Check the URL and repository visibility, then try again.";
+  }
+  if (detail.includes("BRANCH_NOT_FOUND")) {
+    return "That branch no longer exists. Use the repository URL without /tree/… to analyze its default branch.";
+  }
+  if (/could not resolve host|network|timed?\s*out/i.test(detail)) {
+    return "GitHub could not be reached while cloning. Check your connection and try the analysis again.";
+  }
+  if (detail.includes("CREDITS_EXHAUSTED")) {
+    return "This analysis could not finish because the workspace has no credits remaining.";
+  }
+
+  return "The repository could not be cloned or processed. Confirm that it is public, then submit it again.";
+}
+
 function topConnectedFiles(analysis: AnalysisResult | null) {
   if (!analysis) {
     return [] as Array<{ path: string; score: number; lines: number }>;
@@ -84,6 +104,7 @@ export default function UserDashboardPage() {
   const [repo, setRepo] = useState<RepoRow | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [job, setJob] = useState<JobRow | null>(null);
+  const repoStatus = repo?.status;
 
   const loadRepoDetails = useCallback(async () => {
     if (!repoId) {
@@ -126,8 +147,9 @@ export default function UserDashboardPage() {
       return;
     }
 
-    const shouldPoll =
-      (repo?.status && repo.status !== "COMPLETE" && repo.status !== "FAILED") || !analysisResult;
+    const shouldPoll = Boolean(
+      repoStatus && repoStatus !== "COMPLETE" && repoStatus !== "FAILED"
+    );
 
     if (!shouldPoll) {
       return;
@@ -138,7 +160,7 @@ export default function UserDashboardPage() {
     }, 3500);
 
     return () => clearInterval(interval);
-  }, [analysisResult, loadRepoDetails, repo?.status, repoId]);
+  }, [loadRepoDetails, repoId, repoStatus]);
 
   const stackSections = useMemo(() => {
     if (!analysisResult) {
@@ -158,66 +180,45 @@ export default function UserDashboardPage() {
   const connectedFiles = useMemo(() => topConnectedFiles(analysisResult), [analysisResult]);
 
   if (!repoId) {
-    return (
-      <div>
-        <section className="grid min-h-[calc(100svh-13rem)] items-center gap-12 py-6 lg:grid-cols-[1.05fr_.95fr] lg:gap-20 lg:py-10">
-          <div>
-            <p className="font-mono text-[9px] uppercase tracking-[.18em] text-[#6d675f]">Workspace / Ready for input</p>
-            <h2 className="mt-5 max-w-[9ch] font-serif text-[clamp(4rem,7.2vw,7.5rem)] font-normal leading-[.84] tracking-[-.06em] text-[#292721]">
-              See the system before the syntax.
-            </h2>
-            <p className="mt-7 max-w-[34rem] text-base leading-7 text-[#5e5952] sm:text-lg sm:leading-8">
-              Turn any public repository into a practical map of its architecture, dependencies, entry points, and safest route in.
-            </p>
-
-            <div className="mt-8 grid max-w-[34rem] grid-cols-3 border-y border-[#292721] py-4">
-              {[
-                ["01", "Map structure"],
-                ["02", "Trace flow"],
-                ["03", "Start well"],
-              ].map(([number, label]) => (
-                <div key={number}>
-                  <p className="font-mono text-[8px] tracking-[.15em] text-[#c94f34]">{number}</p>
-                  <p className="mt-1.5 text-xs text-[#5e5952] sm:text-sm">{label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="lg:pl-6">
-            <div className="mb-5 flex items-center justify-between border-b border-[#292721]/25 pb-4">
-              <div>
-                <p className="font-serif text-2xl tracking-[-.035em]">Begin an analysis</p>
-                <p className="mt-1 text-xs text-[#6d675f]">Paste a public GitHub repository below.</p>
-              </div>
-              <ShieldCheck className="h-5 w-5 text-[#667a60]" />
-            </div>
-            <RepoAnalyzeBar />
-          </div>
-        </section>
-      </div>
-    );
+    return <RepositoryWorkspace />;
   }
 
   return (
     <div className="space-y-8">
       <section className="border-b border-[#292721] pb-8">
+        <Link
+          href="/user/dashboard"
+          className="group mb-6 inline-flex items-center gap-2 font-mono text-[8px] uppercase tracking-[.16em] text-[#6d675f] transition hover:text-[#292721]"
+        >
+          <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-1" />
+          All repository workspaces
+        </Link>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="font-mono text-[9px] uppercase tracking-[.18em] text-[#6d675f]">Live repository report</p>
             <h2 className="mt-4 font-serif text-5xl font-normal leading-none tracking-[-.055em] text-[#292721] sm:text-6xl">
               {repo ? `${repo.owner}/${repo.name}` : (repoSlug ?? "Loading repository")}
             </h2>
-            <p className="mt-3 font-mono text-[9px] uppercase tracking-[.13em] text-[#6d675f]">Branch / {repo?.branch ?? "main"}</p>
+            <p className="mt-3 font-mono text-[9px] uppercase tracking-[.13em] text-[#6d675f]">
+              Branch / {repo?.branch === "HEAD" ? "Default branch" : (repo?.branch ?? "Resolving")}
+            </p>
           </div>
 
           <div className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 font-mono text-[9px] font-medium uppercase tracking-[.12em] ${statusTone(repo?.status ?? "QUEUED")}`}>
-            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Clock3 className="h-3.5 w-3.5" />}
+            {loading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : repo?.status === "COMPLETE" ? (
+              <CircleCheckBig className="h-3.5 w-3.5" />
+            ) : repo?.status === "FAILED" ? (
+              <AlertTriangle className="h-3.5 w-3.5" />
+            ) : (
+              <Clock3 className="h-3.5 w-3.5" />
+            )}
             {formatStatus(repo?.status ?? "QUEUED")}
           </div>
         </div>
 
-        {error && (
+        {error && repo && (
           <div className="mt-5 border-l-2 border-[#a33f2b] bg-[#ead8cf] px-4 py-3 text-sm text-[#82331f]">
             {error}
           </div>
@@ -226,11 +227,18 @@ export default function UserDashboardPage() {
         {job && repo?.status !== "COMPLETE" && repo?.status !== "FAILED" && (
           <div className="mt-6 border border-[#292721]/35 bg-[#e8dfcf] p-4">
             <div className="flex items-center justify-between gap-3 text-sm">
-              <p className="text-[#6d675f]">Current step: <span className="font-semibold text-[#292721]">{job.currentStep ?? "processing"}</span></p>
+              <p className="text-[#6d675f]">Current step: <span className="font-semibold text-[#292721]">{formatStatus(job.currentStep ?? "processing")}</span></p>
               <p className="font-semibold text-[#292721]">{job.progress}%</p>
             </div>
-            <div className="mt-3 h-1.5 bg-[#cfc3af]">
-              <div className="h-full bg-[#d75c3f] transition-all" style={{ width: `${Math.max(8, Math.min(100, job.progress))}%` }} />
+            <div
+              className="mt-3 h-1.5 bg-[#cfc3af]"
+              role="progressbar"
+              aria-label="Repository analysis progress"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.max(0, Math.min(100, job.progress))}
+            >
+              <div className="h-full bg-[#d75c3f] transition-all" style={{ width: `${Math.max(0, Math.min(100, job.progress))}%` }} />
             </div>
           </div>
         )}
@@ -442,8 +450,32 @@ export default function UserDashboardPage() {
             </article>
           </section>
         </>
+      ) : repo?.status === "FAILED" ? (
+        <section className="border border-[#a33f2b] bg-[#ead8cf] p-6 sm:p-8">
+          <p className="font-mono text-[8px] uppercase tracking-[.15em] text-[#82331f]">Analysis stopped</p>
+          <h3 className="mt-3 font-serif text-3xl tracking-[-.04em] text-[#292721]">
+            This repository could not be analyzed.
+          </h3>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#6d4a42]">
+            {analysisFailureMessage(repo, job)}
+          </p>
+          <Link
+            href="/user/dashboard"
+            className="mt-6 inline-flex h-11 items-center gap-2 bg-[#292721] px-5 text-xs font-medium text-[#f7f2e7] transition hover:bg-[#d75c3f]"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Return and try again
+          </Link>
+        </section>
+      ) : error && !repo ? (
+        <section className="border border-[#a33f2b] bg-[#ead8cf] p-6">
+          <p className="text-sm text-[#82331f]">{error}</p>
+          <button type="button" onClick={() => void loadRepoDetails()} className="mt-4 text-xs font-semibold underline decoration-[#a33f2b] underline-offset-4">
+            Try loading again
+          </button>
+        </section>
       ) : (
-        <section className="border border-[#292721] bg-[#e8dfcf] p-6">
+        <section className="border border-[#292721] bg-[#e8dfcf] p-6" aria-live="polite">
           <p className="font-mono text-[8px] uppercase tracking-[.15em] text-[#c94f34]">Analysis in progress</p>
           <div className="mt-3 flex items-center gap-3 text-sm text-[#5e5952]">
             <Loader2 className="h-4 w-4 animate-spin text-[#d75c3f]" />

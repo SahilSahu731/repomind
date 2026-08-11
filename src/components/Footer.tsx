@@ -21,8 +21,10 @@ export function Footer() {
             <h2 className="font-mono text-[9px] uppercase tracking-[.18em] text-[#918c83]">Explore</h2>
             <ul className="mt-5 space-y-3.5 text-sm text-[#c9c3b8]">
               <li><Link href="/#product" className="transition hover:text-white">Product</Link></li>
+              <li><Link href="/#report" className="transition hover:text-white">Inside the report</Link></li>
               <li><Link href="/#workflow" className="transition hover:text-white">How it works</Link></li>
-              <li><Link href="/#pricing" className="transition hover:text-white">Pricing</Link></li>
+              <li><Link href="/#trust" className="transition hover:text-white">Analysis boundaries</Link></li>
+              <li><Link href="/#faq" className="transition hover:text-white">FAQ</Link></li>
               <li><Link href="/#analyze" className="transition hover:text-white">Analyze a repository</Link></li>
             </ul>
           </div>
@@ -32,11 +34,7 @@ export function Footer() {
             <ul className="mt-5 space-y-3.5 text-sm text-[#c9c3b8]">
               <li><Link href="/signup" className="transition hover:text-white">Create account</Link></li>
               <li><Link href="/login" className="transition hover:text-white">Sign in</Link></li>
-              <li>
-                <Link href="/api/health" className="inline-flex items-center gap-1.5 transition hover:text-white">
-                  API health <ArrowUpRight className="h-3 w-3" />
-                </Link>
-              </li>
+              <li><Link href="/user/dashboard" className="inline-flex items-center gap-1.5 transition hover:text-white">Dashboard <ArrowUpRight className="h-3 w-3" /></Link></li>
             </ul>
           </div>
         </div>

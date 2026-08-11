@@ -69,6 +69,10 @@ export async function walkDirectory(
     const entries = fs.readdirSync(currentPath, { withFileTypes: true });
 
     for (const entry of entries) {
+      if (entry.isSymbolicLink()) {
+        continue;
+      }
+
       if (IGNORE_FILES.has(entry.name)) {
         continue;
       }

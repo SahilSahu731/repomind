@@ -17,8 +17,8 @@ function parseGitHubRepo(value: string) {
 
   return {
     owner: match[1],
-    repo: match[2],
-    branch: match[3] ?? "main",
+    repo: match[2].replace(/\.git$/i, ""),
+    branch: match[3] ?? "HEAD",
   };
 }
 
@@ -31,6 +31,13 @@ export function RepoAnalyzeBar() {
   const [statusMessage, setStatusMessage] = useState("");
 
   const parsedRepo = useMemo(() => parseGitHubRepo(githubUrl), [githubUrl]);
+  const submitLabel = isSubmitting
+    ? "Starting analysis"
+    : status === "loading"
+      ? "Preparing workspace"
+      : status === "authenticated"
+        ? "Analyze repository"
+        : "Continue to analyze";
 
   async function analyzeRepository(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
@@ -86,15 +93,15 @@ export function RepoAnalyzeBar() {
 
   return (
     <form onSubmit={analyzeRepository} className="w-full" noValidate>
-      <div className="rounded-[1.75rem] border border-[#292721] bg-[#f7f2e7] p-2 shadow-[0_24px_70px_-45px_rgba(41,39,33,.55)] sm:p-3">
+      <div className="analyze-card rounded-[1.75rem] border border-[#292721] bg-[#f7f2e7] p-2 shadow-[0_24px_70px_-45px_rgba(41,39,33,.55)] transition duration-500 focus-within:-translate-y-0.5 focus-within:shadow-[0_32px_80px_-42px_rgba(41,39,33,.62)] sm:p-3">
         <div className="flex items-center gap-3 border-b border-[#292721]/25 px-3 py-3 sm:px-4">
           <Github className="h-4 w-4 text-[#292721]" />
           <span className="font-mono text-[9px] uppercase tracking-[.16em] text-[#6d675f]">
             Public repository
           </span>
-          <span className="ml-auto flex items-center gap-1.5 text-[11px] text-[#5f7258]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#6f8666]" />
-            Ready
+          <span aria-live="polite" className="ml-auto flex max-w-[50%] items-center gap-1.5 truncate text-[11px] text-[#5f7258]">
+            <span className="status-pulse h-1.5 w-1.5 shrink-0 rounded-full bg-[#6f8666]" />
+            <span className="truncate">{parsedRepo ? `${parsedRepo.owner}/${parsedRepo.repo}` : "Ready"}</span>
           </span>
         </div>
 
@@ -115,18 +122,24 @@ export function RepoAnalyzeBar() {
             placeholder="https://github.com/owner/repository"
             aria-describedby={error ? "github-url-error" : "github-url-help"}
             aria-invalid={Boolean(error)}
-            className="mt-3 h-14 w-full rounded-xl border border-[#292721]/35 bg-transparent px-4 text-sm text-[#292721] outline-none transition placeholder:text-[#8a8378] focus:border-[#292721] focus-visible:ring-2 focus-visible:ring-[#d75c3f]/35 sm:text-base"
+            className={`mt-3 h-14 w-full rounded-xl border bg-transparent px-4 text-sm text-[#292721] outline-none transition duration-300 placeholder:text-[#8a8378] focus:bg-[#fffaf0] focus-visible:ring-2 sm:text-base ${
+              error
+                ? "border-[#a33f2b] focus-visible:ring-[#a33f2b]/25"
+                : parsedRepo
+                  ? "border-[#667a60] focus-visible:ring-[#667a60]/25"
+                  : "border-[#292721]/35 focus:border-[#292721] focus-visible:ring-[#d75c3f]/35"
+            }`}
           />
 
           <div className="mt-3 min-h-6">
             {error ? (
-              <p id="github-url-error" role="alert" className="text-xs leading-5 text-[#a33f2b]">
+              <p id="github-url-error" role="alert" className="border-l-2 border-[#a33f2b] pl-3 text-xs leading-5 text-[#a33f2b]">
                 {error}
               </p>
             ) : parsedRepo ? (
               <p id="github-url-help" className="flex items-center gap-2 text-xs text-[#5f7258]">
                 <Check className="h-3.5 w-3.5" />
-                Ready to inspect {parsedRepo.owner}/{parsedRepo.repo} on {parsedRepo.branch}
+                Ready to inspect {parsedRepo.owner}/{parsedRepo.repo} on {parsedRepo.branch === "HEAD" ? "its default branch" : parsedRepo.branch}
               </p>
             ) : (
               <p id="github-url-help" className="text-xs text-[#777168]">
@@ -138,25 +151,22 @@ export function RepoAnalyzeBar() {
           <button
             type="submit"
             disabled={isSubmitting || status === "loading"}
-            className="group mt-4 flex h-14 w-full items-center justify-center gap-3 rounded-full bg-[#292721] px-6 text-sm font-medium text-[#f7f2e7] transition hover:bg-[#d75c3f] disabled:cursor-not-allowed disabled:opacity-60"
+            className="analyze-button group mt-4 flex h-14 w-full items-center justify-center gap-3 overflow-hidden rounded-full bg-[#292721] px-6 text-sm font-medium text-[#f7f2e7] transition hover:bg-[#d75c3f] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {isSubmitting
-              ? "Starting analysis"
-              : status === "loading"
-                ? "Preparing workspace"
-                : status === "authenticated"
-                  ? "Analyze repository"
-                  : "Continue to analyze"}
-            {!isSubmitting ? <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /> : null}
+            {isSubmitting ? <Loader2 className="relative z-10 h-4 w-4 animate-spin" /> : null}
+            <span className="relative z-10">{submitLabel}</span>
+            {!isSubmitting ? <ArrowRight className="relative z-10 h-4 w-4 transition-transform group-hover:translate-x-1" /> : null}
           </button>
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 font-mono text-[9px] uppercase tracking-[.12em] text-[#6d675f]">
-        <span>No code is modified</span>
-        <span>Public repositories only</span>
-        <span>Account required</span>
+      <div className="mt-5 grid border-l border-t border-[#292721]/25 font-mono text-[8px] uppercase tracking-[.11em] text-[#6d675f] sm:grid-cols-3">
+        {["Read-only analysis", "Public repositories", "Account required"].map((claim) => (
+          <span key={claim} className="flex items-center gap-2 border-b border-r border-[#292721]/25 px-3 py-2.5">
+            <Check className="h-3 w-3 text-[#667a60]" />
+            {claim}
+          </span>
+        ))}
       </div>
       <p aria-live="polite" className="sr-only">
         {statusMessage}

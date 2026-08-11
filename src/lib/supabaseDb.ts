@@ -1,4 +1,23 @@
 import { env } from "@/lib/env";
+import {
+  localCheckWorkspaceHealth,
+  localConsumeCreditIfNeeded,
+  localCreateAnalysisResult,
+  localCreateJob,
+  localCreateRepo,
+  localEnsureUserExists,
+  localGetAnalysisResultByRepoId,
+  localGetJobById,
+  localGetLatestJobByRepoId,
+  localGetRepoByGithubUrlAndBranch,
+  localGetRepoById,
+  localGetRepoByIdForUser,
+  localGetUserById,
+  localListReposByUser,
+  localUpdateJob,
+  localUpdateRepo,
+} from "@/lib/localWorkspaceDb";
+import { shouldUseLocalWorkspaceDatabase } from "@/lib/runtimeMode";
 
 type RequestMethod = "GET" | "POST" | "PATCH";
 type LogicalTable = "User" | "Repo" | "Job" | "AnalysisResult";
@@ -13,13 +32,13 @@ interface SupabaseQueryOptions {
   preferReturnRepresentation?: boolean;
 }
 
-interface UserRow {
+export interface UserRow {
   id: string;
   plan: Plan;
   creditsRemaining: number;
 }
 
-interface UserSeedInput {
+export interface UserSeedInput {
   id: string;
   email?: string | null;
   name?: string | null;
@@ -68,7 +87,21 @@ export interface AnalysisResultRow {
   startGuide: string;
   fileSummaries: unknown;
   techStack: unknown;
+  contributionScore?: unknown;
   createdAt?: string;
+}
+
+export interface AnalysisResultInput {
+  repoId: string;
+  summary: string;
+  architecture: unknown;
+  fileTree: unknown;
+  dependencyGraph: unknown;
+  entryPoints: unknown;
+  startGuide: string;
+  fileSummaries: unknown;
+  techStack: unknown;
+  contributionScore?: unknown;
 }
 
 interface RepoListResult {
@@ -85,10 +118,10 @@ const TABLE_CANDIDATES: Record<LogicalTable, string[]> = {
 
 function getDatabaseConfig() {
   const baseUrl = env.SUPABASE_URL;
-  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY ?? env.SUPABASE_ANON_KEY;
+  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!baseUrl || !serviceKey) {
-    throw new Error("Supabase database is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_ANON_KEY).");
+    throw new Error("Supabase database is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.");
   }
 
   return { baseUrl, serviceKey };
@@ -194,6 +227,10 @@ export async function listReposByUser(
   limit: number,
   status?: string
 ): Promise<RepoListResult> {
+  if (shouldUseLocalWorkspaceDatabase()) {
+    return localListReposByUser(userId, page, limit, status);
+  }
+
   const from = (page - 1) * limit;
   const filters = [`userId=eq.${encode(userId)}`];
   if (status && status !== "all") {
@@ -219,10 +256,19 @@ export async function listReposByUser(
   };
 }
 
-export async function getRepoByGithubUrlAndBranch(githubUrl: string, branch: string): Promise<RepoRow | null> {
+export async function getRepoByGithubUrlAndBranch(
+  githubUrl: string,
+  branch: string,
+  userId?: string
+): Promise<RepoRow | null> {
+  if (shouldUseLocalWorkspaceDatabase()) {
+    return localGetRepoByGithubUrlAndBranch(githubUrl, branch, userId);
+  }
+
+  const userFilter = userId ? `&userId=eq.${encode(userId)}` : "";
   const result = await supabaseRequestWithTableFallback<RepoRow[]>(
     "Repo",
-    `?select=*&githubUrl=eq.${encode(githubUrl)}&branch=eq.${encode(branch)}&limit=1`,
+    `?select=*&githubUrl=eq.${encode(githubUrl)}&branch=eq.${encode(branch)}${userFilter}&order=createdAt.desc&limit=1`,
     "GET"
   );
 
@@ -238,6 +284,10 @@ export async function createRepo(input: {
   status: RepoStatus;
   shareSlug: string;
 }): Promise<RepoRow> {
+  if (shouldUseLocalWorkspaceDatabase()) {
+    return localCreateRepo(input);
+  }
+
   const result = await supabaseRequestWithTableFallback<RepoRow[]>("Repo", "", "POST", input, {
     preferReturnRepresentation: true,
   });
@@ -250,6 +300,10 @@ export async function createJob(input: {
   progress: number;
   currentStep: string;
 }): Promise<JobRow> {
+  if (shouldUseLocalWorkspaceDatabase()) {
+    return localCreateJob(input);
+  }
+
   const result = await supabaseRequestWithTableFallback<JobRow[]>("Job", "", "POST", input, {
     preferReturnRepresentation: true,
   });
@@ -257,6 +311,10 @@ export async function createJob(input: {
 }
 
 export async function getRepoById(repoId: string): Promise<{ userId: string } | null> {
+  if (shouldUseLocalWorkspaceDatabase()) {
+    return localGetRepoById(repoId);
+  }
+
   const result = await supabaseRequestWithTableFallback<Array<{ userId: string }>>(
     "Repo",
     `?select=userId&id=eq.${encode(repoId)}&limit=1`,
@@ -266,6 +324,10 @@ export async function getRepoById(repoId: string): Promise<{ userId: string } | 
 }
 
 export async function getRepoByIdForUser(repoId: string, userId: string): Promise<RepoRow | null> {
+  if (shouldUseLocalWorkspaceDatabase()) {
+    return localGetRepoByIdForUser(repoId, userId);
+  }
+
   const result = await supabaseRequestWithTableFallback<RepoRow[]>(
     "Repo",
     `?select=*&id=eq.${encode(repoId)}&userId=eq.${encode(userId)}&limit=1`,
@@ -276,6 +338,10 @@ export async function getRepoByIdForUser(repoId: string, userId: string): Promis
 }
 
 export async function getLatestJobByRepoId(repoId: string): Promise<JobRow | null> {
+  if (shouldUseLocalWorkspaceDatabase()) {
+    return localGetLatestJobByRepoId(repoId);
+  }
+
   const result = await supabaseRequestWithTableFallback<JobRow[]>(
     "Job",
     `?select=*&repoId=eq.${encode(repoId)}&order=createdAt.desc&limit=1`,
@@ -286,6 +352,10 @@ export async function getLatestJobByRepoId(repoId: string): Promise<JobRow | nul
 }
 
 export async function getJobById(jobId: string): Promise<JobRow | null> {
+  if (shouldUseLocalWorkspaceDatabase()) {
+    return localGetJobById(jobId);
+  }
+
   const result = await supabaseRequestWithTableFallback<JobRow[]>(
     "Job",
     `?select=*&id=eq.${encode(jobId)}&limit=1`,
@@ -296,6 +366,10 @@ export async function getJobById(jobId: string): Promise<JobRow | null> {
 }
 
 export async function getAnalysisResultByRepoId(repoId: string): Promise<AnalysisResultRow | null> {
+  if (shouldUseLocalWorkspaceDatabase()) {
+    return localGetAnalysisResultByRepoId(repoId);
+  }
+
   const result = await supabaseRequestWithTableFallback<AnalysisResultRow[]>(
     "AnalysisResult",
     `?select=*&repoId=eq.${encode(repoId)}&limit=1`,
@@ -305,8 +379,12 @@ export async function getAnalysisResultByRepoId(repoId: string): Promise<Analysi
   return result.data[0] ?? null;
 }
 
-export async function createAnalysisResult(input: Record<string, unknown>): Promise<void> {
-  await supabaseRequestWithTableFallback<unknown[]>("AnalysisResult", "", "POST", input, {
+export async function createAnalysisResult(input: AnalysisResultInput): Promise<void> {
+  if (shouldUseLocalWorkspaceDatabase()) {
+    return localCreateAnalysisResult(input);
+  }
+
+  await supabaseRequestWithTableFallback<unknown[]>("AnalysisResult", "", "POST", { ...input }, {
     preferReturnRepresentation: false,
   });
 }
@@ -315,6 +393,10 @@ export async function updateRepo(
   repoId: string,
   updates: Record<string, unknown>
 ): Promise<void> {
+  if (shouldUseLocalWorkspaceDatabase()) {
+    return localUpdateRepo(repoId, updates);
+  }
+
   await supabaseRequestWithTableFallback<unknown[]>(
     "Repo",
     `?id=eq.${encode(repoId)}`,
@@ -327,6 +409,10 @@ export async function updateJob(
   jobId: string,
   updates: Record<string, unknown>
 ): Promise<void> {
+  if (shouldUseLocalWorkspaceDatabase()) {
+    return localUpdateJob(jobId, updates);
+  }
+
   await supabaseRequestWithTableFallback<unknown[]>(
     "Job",
     `?id=eq.${encode(jobId)}`,
@@ -336,6 +422,10 @@ export async function updateJob(
 }
 
 export async function getUserById(userId: string): Promise<UserRow | null> {
+  if (shouldUseLocalWorkspaceDatabase()) {
+    return localGetUserById(userId);
+  }
+
   try {
     const result = await supabaseRequestWithTableFallback<UserRow[]>(
       "User",
@@ -354,6 +444,10 @@ export async function getUserById(userId: string): Promise<UserRow | null> {
 }
 
 export async function consumeCreditIfNeeded(userId: string): Promise<void> {
+  if (shouldUseLocalWorkspaceDatabase()) {
+    return localConsumeCreditIfNeeded(userId);
+  }
+
   const user = await getUserById(userId);
   if (!user || user.plan !== "FREE") {
     return;
@@ -376,23 +470,24 @@ export async function consumeCreditIfNeeded(userId: string): Promise<void> {
 export async function ensureUserExists(input: UserSeedInput): Promise<void> {
   const sanitizedCredits = Math.max(0, Math.floor(input.creditsRemaining));
 
-  try {
-    await supabaseRequestWithTableFallback<unknown[]>(
-      "User",
-      `?id=eq.${encode(input.id)}`,
-      "PATCH",
-      {
-        email: input.email ?? null,
-        name: input.name ?? null,
-        image: input.image ?? null,
-        githubUsername: input.githubUsername ?? null,
-        plan: input.plan,
-        creditsRemaining: sanitizedCredits,
-      }
-    );
+  if (shouldUseLocalWorkspaceDatabase()) {
+    return localEnsureUserExists({ ...input, creditsRemaining: sanitizedCredits });
+  }
 
+  try {
     const existing = await getUserById(input.id);
     if (existing) {
+      await supabaseRequestWithTableFallback<unknown[]>(
+        "User",
+        `?id=eq.${encode(input.id)}`,
+        "PATCH",
+        {
+          email: input.email ?? null,
+          name: input.name ?? null,
+          image: input.image ?? null,
+          githubUsername: input.githubUsername ?? null,
+        }
+      );
       return;
     }
 
@@ -415,5 +510,9 @@ export async function ensureUserExists(input: UserSeedInput): Promise<void> {
 }
 
 export async function checkSupabaseDatabaseHealth(): Promise<void> {
+  if (shouldUseLocalWorkspaceDatabase()) {
+    return localCheckWorkspaceHealth();
+  }
+
   await supabaseRequestWithTableFallback<{ id: string }[]>("Repo", "?select=id&limit=1", "GET");
 }

@@ -13,7 +13,7 @@ export function AuthIllustration({ className }: { className?: string }) {
       <circle cx="516" cy="207" r="105" stroke="#292721" strokeOpacity=".22" />
       <path d="M68 73H692M68 357H692" stroke="#292721" strokeOpacity=".2" />
 
-      <g stroke="#292721" strokeWidth="1.4">
+      <g fill="none" stroke="#292721" strokeWidth="1.4">
         <path d="M129 209H245L337 126H448L516 207L624 120" />
         <path d="M245 209L337 295H468L516 207L638 299" />
         <path d="M337 126V295M448 126L468 295" strokeOpacity=".55" />

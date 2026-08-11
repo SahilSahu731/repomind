@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
     // Normalize the GitHub URL
     const normalizedUrl = `https://github.com/${owner}/${repo}`;
-    const resolvedBranch = branch || "main";
+    const resolvedBranch = branch || "HEAD";
 
     // Ensure user is seeded in Supabase
     await ensureUserExists({
@@ -65,7 +65,11 @@ export async function POST(req: NextRequest) {
     });
 
     // Check cache — existing completed analysis
-    const cached = await getRepoByGithubUrlAndBranch(normalizedUrl, resolvedBranch);
+    const cached = await getRepoByGithubUrlAndBranch(
+      normalizedUrl,
+      resolvedBranch,
+      session.user.id
+    );
     if (
       cached &&
       cached.status === "COMPLETE" &&

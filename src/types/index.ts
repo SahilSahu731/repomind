@@ -79,6 +79,17 @@ export interface AnalysisResult {
   startGuide: string;
   fileSummaries: Record<string, string>;
   techStack: TechStack;
+  contributionScore?: {
+    total: number;
+    hasContributing: boolean;
+    hasSetupInstructions: boolean;
+    hasCiCd: boolean;
+    hasGoodFirstIssues: boolean;
+    readmeQuality: number;
+    prResponseTime: number;
+    hasCodeOfConduct: boolean;
+    hasLicense: boolean;
+  };
 }
 
 export interface RepoWithAnalysis {

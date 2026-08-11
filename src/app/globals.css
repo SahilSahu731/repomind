@@ -145,6 +145,65 @@ html {
   }
 }
 
+@keyframes graphDash {
+  to {
+    stroke-dashoffset: -48;
+  }
+}
+
+@keyframes graphDashLight {
+  to {
+    stroke-dashoffset: 48;
+  }
+}
+
+@keyframes softNodePulse {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes readyHalo {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(102, 122, 96, 0.18);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(102, 122, 96, 0);
+  }
+}
+
+@keyframes slowOrbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes scanAcross {
+  from {
+    transform: translateX(-140%);
+  }
+  to {
+    transform: translateX(680%);
+  }
+}
+
+@keyframes pipelinePulse {
+  0%,
+  100% {
+    filter: saturate(0.9);
+  }
+  50% {
+    filter: saturate(1.25) drop-shadow(0 0 5px rgba(215, 92, 63, 0.24));
+  }
+}
+
 .reveal {
   animation: fadeUp 720ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
@@ -159,6 +218,166 @@ html {
 
 .pulse-bar {
   animation: pulseBar 2.8s ease-in-out infinite;
+}
+
+.capability-visual {
+  position: relative;
+  height: 10.5rem;
+  overflow: hidden;
+  border-top: 1px solid rgba(41, 39, 33, 0.42);
+  border-bottom: 1px solid rgba(41, 39, 33, 0.42);
+  background: rgba(234, 226, 210, 0.7);
+  transition: transform 500ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 500ms ease;
+}
+
+.capability-card:hover .capability-visual,
+.capability-card:focus-within .capability-visual {
+  transform: translateY(-2px);
+  border-color: #292721;
+}
+
+.capability-accent {
+  width: 0;
+  transition: width 500ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.capability-card:hover .capability-accent,
+.capability-card:focus-within .capability-accent {
+  width: 3rem;
+}
+
+.capability-layer {
+  transition: transform 450ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 450ms ease;
+}
+
+.capability-card:hover .capability-layer:nth-child(1),
+.capability-card:focus-within .capability-layer:nth-child(1) {
+  transform: translateX(4px);
+}
+
+.capability-card:hover .capability-layer:nth-child(2),
+.capability-card:focus-within .capability-layer:nth-child(2) {
+  transform: translateX(9px);
+  background: #f0d9cf;
+}
+
+.capability-card:hover .capability-layer:nth-child(3),
+.capability-card:focus-within .capability-layer:nth-child(3) {
+  transform: translateX(2px);
+}
+
+.motion-dash {
+  stroke-dasharray: 7 8;
+  animation: graphDash 8s linear infinite;
+}
+
+.motion-dash-light {
+  stroke-dasharray: 6 9;
+  animation: graphDashLight 9s linear infinite;
+}
+
+.motion-node {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: softNodePulse 3.8s ease-in-out infinite;
+}
+
+.motion-node-delay {
+  animation-delay: -1.9s;
+}
+
+.status-pulse {
+  animation: readyHalo 2.6s ease-in-out infinite;
+}
+
+.route-pulse {
+  box-shadow: 0 0 0 4px rgba(215, 92, 63, 0.12);
+  transition: box-shadow 450ms ease, transform 450ms ease;
+}
+
+.capability-card:hover .route-pulse,
+.capability-card:focus-within .route-pulse {
+  box-shadow: 0 0 0 7px rgba(215, 92, 63, 0.08);
+  transform: scale(1.08);
+}
+
+.scan-orbit {
+  animation: slowOrbit 16s linear infinite;
+}
+
+.scan-beam {
+  animation: scanAcross 7s ease-in-out infinite;
+}
+
+.signal-grow {
+  transform: scaleX(0.18);
+  transform-origin: left;
+  transition: transform 800ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.capability-card:hover .signal-grow,
+.capability-card:focus-within .signal-grow {
+  transform: scaleX(1);
+}
+
+.pipeline-pulse {
+  animation: pipelinePulse 3.2s ease-in-out infinite;
+}
+
+.analyze-card {
+  position: relative;
+}
+
+.analyze-card::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  content: "";
+  box-shadow: inset 0 0 0 0 rgba(215, 92, 63, 0);
+  transition: box-shadow 450ms ease;
+}
+
+.analyze-card:focus-within::after {
+  box-shadow: inset 0 0 0 2px rgba(215, 92, 63, 0.14);
+}
+
+.analyze-button {
+  position: relative;
+  isolation: isolate;
+}
+
+.analyze-button::before {
+  position: absolute;
+  inset: -20% auto -20% -35%;
+  width: 28%;
+  transform: skewX(-18deg);
+  background: rgba(255, 255, 255, 0.13);
+  content: "";
+  transition: left 650ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.analyze-button:hover::before,
+.analyze-button:focus-visible::before {
+  left: 112%;
+}
+
+.motion-ready [data-scroll-reveal] {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 680ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 680ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.motion-ready [data-scroll-reveal][data-reveal-order="1"] {
+  transition-delay: 90ms;
+}
+
+.motion-ready [data-scroll-reveal].is-revealed {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .dashboard-markdown > * + * {
@@ -219,4 +438,36 @@ html {
   background: transparent;
   color: inherit;
   padding: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-dash,
+  .motion-dash-light,
+  .motion-node,
+  .status-pulse,
+  .scan-orbit,
+  .scan-beam,
+  .pipeline-pulse {
+    animation: none !important;
+  }
+
+  .capability-accent,
+  .capability-layer,
+  .capability-visual,
+  .signal-grow,
+  .route-pulse,
+  .analyze-card,
+  .analyze-button::before,
+  .motion-ready [data-scroll-reveal] {
+    transition: none !important;
+  }
+
+  .signal-grow {
+    transform: scaleX(1) !important;
+  }
+
+  .motion-ready [data-scroll-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }

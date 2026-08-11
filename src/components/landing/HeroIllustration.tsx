@@ -9,7 +9,7 @@ const files = [
 
 export function HeroIllustration() {
   return (
-    <div className="relative mx-auto w-full max-w-[39rem]" aria-label="Example RepoMind architecture analysis">
+    <div className="relative mx-auto w-full max-w-[39rem]" aria-label="Illustrative RepoMind architecture report">
       <div className="absolute -left-8 top-8 h-28 w-28 rounded-full bg-[#d97757]/35 blur-3xl" />
       <div className="absolute -right-8 bottom-12 h-36 w-36 rounded-full bg-[#7b8f72]/30 blur-3xl" />
 
@@ -22,7 +22,7 @@ export function HeroIllustration() {
             </span>
           </div>
           <span className="rounded-full border border-white/14 px-2.5 py-1 font-mono text-[9px] uppercase tracking-[.12em] text-[#cdc8bc]">
-            complete
+            example
           </span>
         </div>
 
@@ -65,7 +65,7 @@ export function HeroIllustration() {
             </div>
 
             <svg className="mt-6 h-56 w-full" viewBox="0 0 360 230" role="img" aria-label="Repository dependency graph">
-              <g stroke="#77746c" strokeOpacity=".45" strokeWidth="1">
+              <g fill="none" stroke="#77746c" strokeOpacity=".45" strokeWidth="1">
                 <path d="M58 111 137 58 207 84 298 44" />
                 <path d="M58 111 138 159 207 84 265 172" />
                 <path d="M138 159 265 172 314 119 298 44" />

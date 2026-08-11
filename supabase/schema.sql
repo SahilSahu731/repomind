@@ -64,10 +64,15 @@ create table if not exists public."AnalysisResult" (
   "startGuide" text not null,
   "fileSummaries" jsonb not null,
   "techStack" jsonb not null,
+  "contributionScore" jsonb,
   "createdAt" timestamptz not null default now(),
   "updatedAt" timestamptz not null default now(),
   constraint analysis_repo_fk foreign key ("repoId") references public."Repo"(id) on delete cascade
 );
+
+-- Existing installations can adopt newly persisted report signals safely.
+alter table public."AnalysisResult"
+add column if not exists "contributionScore" jsonb;
 
 create index if not exists repo_user_created_idx on public."Repo" ("userId", "createdAt" desc);
 create index if not exists repo_lookup_idx on public."Repo" ("githubUrl", branch);

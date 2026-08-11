@@ -9,8 +9,10 @@ import { BrandMark } from "@/components/BrandMark";
 
 const navLinks = [
   { href: "/#product", label: "Product" },
+  { href: "/#report", label: "Report" },
   { href: "/#workflow", label: "How it works" },
-  { href: "/#pricing", label: "Pricing" },
+  { href: "/#trust", label: "Trust" },
+  { href: "/#pricing", label: "Access" },
 ];
 
 export function Navbar() {
@@ -61,7 +63,7 @@ export function Navbar() {
           RepoMind
         </Link>
 
-        <nav aria-label="Primary navigation" className="hidden items-center gap-8 text-sm md:flex">
+        <nav aria-label="Primary navigation" className="hidden items-center gap-6 text-sm lg:flex xl:gap-8">
           {navLinks.map((link) => (
             <Link key={link.href} href={link.href} className="transition hover:text-[#c94f34]">
               {link.label}
@@ -125,7 +127,7 @@ export function Navbar() {
             onClick={() => setIsMobileOpen((value) => !value)}
             aria-label="Toggle navigation"
             aria-expanded={isMobileOpen}
-            className="grid h-10 w-10 place-items-center rounded-full border border-[#292721] md:hidden"
+            className="grid h-10 w-10 place-items-center rounded-full border border-[#292721] lg:hidden"
           >
             {isMobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
@@ -133,7 +135,7 @@ export function Navbar() {
       </div>
 
       {isMobileOpen ? (
-        <nav aria-label="Mobile navigation" className="border-t border-[#292721] bg-[#f5f0e5] px-6 py-5 md:hidden">
+        <nav aria-label="Mobile navigation" className="border-t border-[#292721] bg-[#f5f0e5] px-6 py-5 lg:hidden">
           <div className="flex flex-col">
             {navLinks.map((link) => (
               <Link key={link.href} href={link.href} onClick={() => setIsMobileOpen(false)} className="border-b border-[#292721]/20 py-4 text-lg font-medium">

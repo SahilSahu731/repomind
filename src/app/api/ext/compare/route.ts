@@ -49,8 +49,8 @@ export async function POST(req: NextRequest) {
     const urlB = `https://github.com/${repoB.owner}/${repoB.repo}`;
 
     const [rowA, rowB] = await Promise.all([
-      getRepoByGithubUrlAndBranch(urlA, "main"),
-      getRepoByGithubUrlAndBranch(urlB, "main"),
+      getRepoByGithubUrlAndBranch(urlA, "HEAD", session.user.id),
+      getRepoByGithubUrlAndBranch(urlB, "HEAD", session.user.id),
     ]);
 
     if (!rowA || !rowB) {

@@ -22,7 +22,7 @@ interface UserWorkspaceLayoutProps {
 }
 
 const NAV_ITEMS = [
-  { href: "/user/dashboard", label: "Dashboard", icon: LayoutDashboard, number: "01" },
+  { href: "/user/dashboard", label: "Repositories", icon: LayoutDashboard, number: "01" },
   { href: "/user/profile", label: "Profile", icon: CircleUserRound, number: "02" },
   { href: "/user/activity", label: "Activity", icon: BarChart3, number: "03" },
   { href: "/user/billing", label: "Billing", icon: CreditCard, number: "04" },
@@ -120,12 +120,12 @@ export default function UserWorkspaceLayout({ children }: UserWorkspaceLayoutPro
         <section className="min-w-0 flex-1">
           <header className="sticky top-0 z-40 hidden h-22 items-center justify-between border-b border-[#292721] bg-[#f5f0e5]/95 px-8 backdrop-blur-md lg:flex xl:px-12">
             <div>
-              <p className="font-mono text-[8px] uppercase tracking-[.18em] text-[#6d675f]">RepoMind / User workspace</p>
+              <p className="font-mono text-[8px] uppercase tracking-[.18em] text-[#6d675f]">RepoMind / Personal workspace</p>
               <h1 className="mt-1 font-serif text-2xl tracking-[-.035em]">{activePage}</h1>
             </div>
             <div className="flex items-center gap-6">
               <div className="text-right">
-                <p className="text-xs font-medium">{user?.name ?? "Your workspace"}</p>
+                <p className="text-xs font-medium">{user?.name ? `${user.name}'s repositories` : "Your repositories"}</p>
                 <p className="mt-0.5 font-mono text-[8px] uppercase tracking-[.13em] text-[#6d675f]">Read-only analysis</p>
               </div>
               <Link href="/" className="group inline-flex h-10 items-center gap-2 rounded-full border border-[#292721] px-4 text-xs font-medium transition hover:bg-[#292721] hover:text-[#f5f0e5]">

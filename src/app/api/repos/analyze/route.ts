@@ -9,22 +9,33 @@ import {
   createJob,
   createRepo,
   ensureUserExists,
+  getLatestJobByRepoId,
   getRepoByGithubUrlAndBranch,
   getUserById,
+  updateJob,
+  updateRepo,
 } from "@/lib/supabaseDb";
 import { analyzeSchema } from "@/lib/validations/repo";
 
-function parseGitHubUrl(url: string): { owner: string; repo: string; branch: string } {
+function parseGitHubUrl(url: string): {
+  owner: string;
+  repo: string;
+  branch: string;
+  cloneUrl: string;
+} {
   const regex = /^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+)(?:\/tree\/([\w./-]+))?$/;
   const match = url.match(regex);
   if (!match) {
     throw new Error("INVALID_URL");
   }
 
+  const repo = match[2].replace(/\.git$/i, "");
+
   return {
     owner: match[1],
-    repo: match[2],
-    branch: match[3] ?? "main",
+    repo,
+    branch: match[3] ?? "HEAD",
+    cloneUrl: `https://github.com/${match[1]}/${repo}`,
   };
 }
 
@@ -47,7 +58,7 @@ export async function POST(req: Request) {
       return fail(error.code, error.message, error.status);
     }
 
-    const { owner, repo, branch } = parseGitHubUrl(parsed.data.githubUrl);
+    const { owner, repo, branch, cloneUrl } = parseGitHubUrl(parsed.data.githubUrl);
 
     await ensureUserExists({
       id: session.user.id,
@@ -59,60 +70,19 @@ export async function POST(req: Request) {
       creditsRemaining: session.user.creditsRemaining,
     });
 
-    const user = await getUserById(session.user.id);
-    if (!user) {
-      const fallbackUser = {
-        id: session.user.id,
-        plan: session.user.plan,
-        creditsRemaining: session.user.creditsRemaining,
-      };
-
-      if (fallbackUser.plan === "FREE" && fallbackUser.creditsRemaining <= 0) {
-        const creditError = getApiError("CREDITS_EXHAUSTED");
-        return fail(creditError.code, creditError.message, creditError.status);
-      }
-
-      const success = await limitAnalyze(`user:${fallbackUser.id}`, fallbackUser.plan !== "FREE");
-      if (!success) {
-        const limitError = getApiError("RATE_LIMITED");
-        return fail(limitError.code, limitError.message, limitError.status);
-      }
-
-      const repoRow = await createRepo({
-        userId: fallbackUser.id,
-        githubUrl: parsed.data.githubUrl,
-        owner,
-        name: repo,
-        branch,
-        status: "QUEUED",
-        shareSlug: nanoid(10),
-      });
-
-      const jobRow = await createJob({
-        repoId: repoRow.id,
-        status: "QUEUED",
-        progress: 0,
-        currentStep: "queued",
-      });
-
-      await enqueueAnalyzeRepoJob({
-        repoId: repoRow.id,
-        jobId: jobRow.id,
-        githubUrl: parsed.data.githubUrl,
-        owner,
-        repo,
-        branch,
-      });
-
-      return ok({ jobId: jobRow.id, repoId: repoRow.id }, 202);
-    }
+    const storedUser = await getUserById(session.user.id);
+    const user = storedUser ?? {
+      id: session.user.id,
+      plan: session.user.plan,
+      creditsRemaining: session.user.creditsRemaining,
+    };
 
     if (user.plan === "FREE" && user.creditsRemaining <= 0) {
       const error = getApiError("CREDITS_EXHAUSTED");
       return fail(error.code, error.message, error.status);
     }
 
-    const cached = await getRepoByGithubUrlAndBranch(parsed.data.githubUrl, branch);
+    const cached = await getRepoByGithubUrlAndBranch(cloneUrl, branch, user.id);
 
     if (
       cached &&
@@ -123,6 +93,18 @@ export async function POST(req: Request) {
       return ok({ cached: true, repoId: cached.id });
     }
 
+    if (cached && !["COMPLETE", "FAILED"].includes(cached.status)) {
+      const existingJob = await getLatestJobByRepoId(cached.id);
+      return ok(
+        {
+          alreadyRunning: true,
+          repoId: cached.id,
+          jobId: existingJob?.id,
+        },
+        202
+      );
+    }
+
     const success = await limitAnalyze(`user:${user.id}`, user.plan !== "FREE");
     if (!success) {
       const error = getApiError("RATE_LIMITED");
@@ -131,7 +113,7 @@ export async function POST(req: Request) {
 
     const repoRow = await createRepo({
       userId: user.id,
-      githubUrl: parsed.data.githubUrl,
+      githubUrl: cloneUrl,
       owner,
       name: repo,
       branch,
@@ -146,14 +128,32 @@ export async function POST(req: Request) {
       currentStep: "queued",
     });
 
-    await enqueueAnalyzeRepoJob({
-      repoId: repoRow.id,
-      jobId: jobRow.id,
-      githubUrl: parsed.data.githubUrl,
-      owner,
-      repo,
-      branch,
-    });
+    try {
+      await enqueueAnalyzeRepoJob({
+        repoId: repoRow.id,
+        jobId: jobRow.id,
+        githubUrl: cloneUrl,
+        owner,
+        repo,
+        branch,
+      });
+    } catch (queueError: unknown) {
+      const message = queueError instanceof Error
+        ? queueError.message
+        : "The analysis worker could not accept this job";
+
+      await Promise.all([
+        updateRepo(repoRow.id, { status: "FAILED", errorMessage: message }),
+        updateJob(jobRow.id, {
+          status: "FAILED",
+          progress: 0,
+          currentStep: "failed",
+          errorLog: message,
+          completedAt: new Date().toISOString(),
+        }),
+      ]);
+      throw queueError;
+    }
 
     return ok({ jobId: jobRow.id, repoId: repoRow.id }, 202);
   } catch (error: unknown) {
@@ -165,7 +165,10 @@ export async function POST(req: Request) {
       return fail(dbError.code, dbError.message, dbError.status);
     }
 
-    const analysisError = getApiError("ANALYSIS_FAILED");
+    const message = error instanceof Error && error.message === "INVALID_URL"
+      ? "Enter a valid public GitHub repository URL"
+      : undefined;
+    const analysisError = getApiError(message ? "INVALID_URL" : "ANALYSIS_FAILED", message);
     return fail(analysisError.code, analysisError.message, analysisError.status);
   }
 }
