@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import type { RepoRow } from "@/lib/supabaseDb";
 import { RepoAnalyzeBar } from "@/components/landing/RepoAnalyzeBar";
+import { announceCreditsChanged } from "@/lib/creditBalance";
 
 type WorkspaceFilter = "all" | "complete" | "in-progress" | "failed";
 
@@ -247,6 +248,7 @@ export function RepositoryWorkspace() {
         | ApiErrorResponse;
 
       if (!response.ok || !payload.success || !payload.data.repoId) {
+        if (response.status === 402) announceCreditsChanged();
         setAnalyzeError(
           payload.success ? "The analysis could not be started. Please try again." : payload.error.message
         );

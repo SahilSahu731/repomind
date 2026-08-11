@@ -440,6 +440,44 @@ html {
   padding: 0;
 }
 
+.report-node-strip {
+  scrollbar-width: none;
+}
+
+.report-node-strip::-webkit-scrollbar {
+  display: none;
+}
+
+@media print {
+  .workspace-sidebar,
+  .workspace-header,
+  .report-index,
+  .marketing-grid {
+    display: none !important;
+  }
+
+  .workspace-content,
+  .workspace-main {
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .workspace-main > div {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  details > * {
+    display: block !important;
+  }
+
+  section,
+  article,
+  details {
+    break-inside: avoid;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .motion-dash,
   .motion-dash-light,

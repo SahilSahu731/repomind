@@ -4,6 +4,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { ArrowRight, Check, Github, Loader2 } from "lucide-react";
+import { announceCreditsChanged } from "@/lib/creditBalance";
 
 function parseGitHubRepo(value: string) {
   const normalized = value.trim().replace(/\/$/, "");
@@ -75,6 +76,7 @@ export function RepoAnalyzeBar() {
           return;
         }
 
+        if (response.status === 402) announceCreditsChanged();
         setError(payload.success ? "Could not analyze this repository." : payload.error.message);
         return;
       }

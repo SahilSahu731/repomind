@@ -50,7 +50,7 @@ export default function UserWorkspaceLayout({ children }: UserWorkspaceLayoutPro
   return (
     <div className="marketing-theme min-h-svh bg-[#f5f0e5] text-[#292721]">
       <div className="flex min-h-svh w-full flex-col lg:flex-row">
-        <aside className="border-b border-[#292721] bg-[#e8dfcf] lg:sticky lg:top-0 lg:flex lg:h-svh lg:w-64 lg:shrink-0 lg:flex-col lg:border-b-0 lg:border-r">
+        <aside className="workspace-sidebar border-b border-[#292721] bg-[#e8dfcf] lg:sticky lg:top-0 lg:flex lg:h-svh lg:w-64 lg:shrink-0 lg:flex-col lg:border-b-0 lg:border-r">
           <div className="flex h-18 items-center justify-between border-b border-[#292721] px-5 lg:h-22 lg:px-7">
             <Link href="/" className="flex items-center gap-2.5 text-base font-semibold tracking-[-.025em]">
               <BrandMark className="h-7 w-7 text-[#d75c3f]" />
@@ -93,8 +93,20 @@ export default function UserWorkspaceLayout({ children }: UserWorkspaceLayoutPro
               <p className="font-mono text-[8px] uppercase tracking-[.16em] text-[#6d675f]">Current plan</p>
               <div className="mt-1.5 flex items-end justify-between gap-3">
                 <p className="font-serif text-2xl leading-none">{user?.plan ?? "FREE"}</p>
-                <p className="text-xs text-[#6d675f]">{user?.creditsRemaining ?? "—"} credits</p>
+                <p className={`text-xs ${user?.creditsRemaining === 0 ? "text-[#a33f2b]" : "text-[#6d675f]"}`}>
+                  {user ? `${user.creditsRemaining} ${user.creditsRemaining === 1 ? "credit" : "credits"}` : "Syncing…"}
+                </p>
               </div>
+              {user?.plan === "FREE" ? (
+                <div className="mt-3 grid grid-cols-3 gap-1" aria-label={`${user.creditsRemaining} of 3 free analysis credits remaining`}>
+                  {[0, 1, 2].map((index) => (
+                    <span
+                      key={index}
+                      className={`h-1.5 ${index < user.creditsRemaining ? "bg-[#667a60]" : "bg-[#bdb3a2]"}`}
+                    />
+                  ))}
+                </div>
+              ) : null}
             </div>
 
             <div className="flex items-center gap-3">
@@ -117,8 +129,8 @@ export default function UserWorkspaceLayout({ children }: UserWorkspaceLayoutPro
           </div>
         </aside>
 
-        <section className="min-w-0 flex-1">
-          <header className="sticky top-0 z-40 hidden h-22 items-center justify-between border-b border-[#292721] bg-[#f5f0e5]/95 px-8 backdrop-blur-md lg:flex xl:px-12">
+        <section className="workspace-content min-w-0 flex-1">
+          <header className="workspace-header sticky top-0 z-40 hidden h-22 items-center justify-between border-b border-[#292721] bg-[#f5f0e5]/95 px-8 backdrop-blur-md lg:flex xl:px-12">
             <div>
               <p className="font-mono text-[8px] uppercase tracking-[.18em] text-[#6d675f]">RepoMind / Personal workspace</p>
               <h1 className="mt-1 font-serif text-2xl tracking-[-.035em]">{activePage}</h1>
@@ -135,7 +147,7 @@ export default function UserWorkspaceLayout({ children }: UserWorkspaceLayoutPro
             </div>
           </header>
 
-          <main className="relative min-h-[calc(100svh-7.5rem)] overflow-hidden lg:min-h-[calc(100svh-5.5rem)]">
+          <main className="workspace-main relative min-h-[calc(100svh-7.5rem)] overflow-x-clip lg:min-h-[calc(100svh-5.5rem)]">
             <div className="marketing-grid pointer-events-none absolute inset-0 opacity-30" />
             <div className="relative mx-auto w-full max-w-[92rem] p-5 sm:p-8 lg:p-10 xl:p-12">{children}</div>
           </main>

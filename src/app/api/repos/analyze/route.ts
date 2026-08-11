@@ -70,19 +70,7 @@ export async function POST(req: Request) {
       creditsRemaining: session.user.creditsRemaining,
     });
 
-    const storedUser = await getUserById(session.user.id);
-    const user = storedUser ?? {
-      id: session.user.id,
-      plan: session.user.plan,
-      creditsRemaining: session.user.creditsRemaining,
-    };
-
-    if (user.plan === "FREE" && user.creditsRemaining <= 0) {
-      const error = getApiError("CREDITS_EXHAUSTED");
-      return fail(error.code, error.message, error.status);
-    }
-
-    const cached = await getRepoByGithubUrlAndBranch(cloneUrl, branch, user.id);
+    const cached = await getRepoByGithubUrlAndBranch(cloneUrl, branch, session.user.id);
 
     if (
       cached &&
@@ -103,6 +91,18 @@ export async function POST(req: Request) {
         },
         202
       );
+    }
+
+    const storedUser = await getUserById(session.user.id);
+    const user = storedUser ?? {
+      id: session.user.id,
+      plan: session.user.plan,
+      creditsRemaining: session.user.creditsRemaining,
+    };
+
+    if (user.plan === "FREE" && user.creditsRemaining <= 0) {
+      const error = getApiError("CREDITS_EXHAUSTED");
+      return fail(error.code, error.message, error.status);
     }
 
     const success = await limitAnalyze(`user:${user.id}`, user.plan !== "FREE");
