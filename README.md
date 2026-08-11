@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RepoMind
 
-## Getting Started
+RepoMind analyzes public GitHub repositories and turns their structure, dependencies, entry points, technology choices, and contribution signals into a navigable engineering report.
 
-First, run the development server:
+## Local development
+
+1. Install dependencies with `npm install`.
+2. Copy `.env.example` to `.env.local` and replace the development values you need.
+3. Run the web application with `npm run dev`.
+
+When Supabase is intentionally left at the example URL outside production, account and workspace data use the ignored `.repomind/` development store and analysis runs inline. Production fails closed instead of using that fallback.
+
+## Production architecture
+
+RepoMind is not a static export. A production deployment needs:
+
+- the Next.js web process (`npm run build`, then `npm run start`);
+- Supabase Auth and the schema in `supabase/schema.sql` using a server-only service-role key;
+- a TCP-compatible Redis instance shared by the web process and BullMQ worker;
+- a long-running analysis worker with Git, outbound network access, and writable temporary storage;
+- Upstash REST credentials for distributed API and analysis rate limiting;
+- a Gemini API key for AI-generated report detail.
+
+Run the analysis worker with `npm run worker`. The worker must remain alive independently of the web process.
+
+## Security and operations
+
+- Never expose `NEXTAUTH_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`, Redis credentials, Gemini keys, or Sentry credentials to client code.
+- Set `NEXTAUTH_URL` and `NEXT_PUBLIC_SITE_URL` to the canonical HTTPS origin.
+- Set `EXTENSION_ALLOWED_ORIGINS` to exact comma-separated extension origins. Wildcards are not accepted.
+- Production API requests fail closed when the Upstash rate limiter is not configured or unavailable.
+- Sentry error monitoring is enabled only in production when its DSNs are configured. Default personal-information collection and session replay are disabled.
+- The application intentionally contains no placeholder analytics collector. Add a reviewed, consent-aware analytics provider only when there is a real measurement requirement.
+
+## Release checks
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run lint
+npm run typecheck
+npm run build
+npm audit --omit=dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+After deployment, test email and GitHub authentication, a complete repository analysis, credit deduction, report persistence, invalid-repository handling, extension CORS, rate-limit responses, error reporting, and all legal/support routes.

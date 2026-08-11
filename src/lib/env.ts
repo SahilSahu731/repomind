@@ -6,6 +6,7 @@ const envSchema = z.object({
   GITHUB_CLIENT_SECRET: z.string().min(1),
   NEXTAUTH_SECRET: z.string().min(1),
   NEXTAUTH_URL: z.string().url(),
+  EXTENSION_ALLOWED_ORIGINS: z.string().optional(),
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
@@ -23,6 +24,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_RAZORPAY_KEY_ID: z.string().optional(),
   SENTRY_DSN: z.string().optional(),
   NEXT_PUBLIC_SENTRY_DSN: z.string().optional(),
+  NEXT_PUBLIC_SUPPORT_EMAIL: z.string().email().optional(),
   RESEND_API_KEY: z.string().optional(),
 });
 

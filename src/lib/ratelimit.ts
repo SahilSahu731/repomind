@@ -40,10 +40,26 @@ const globalLimiter =
       })
     : null;
 
+let warnedAboutDevelopmentBypass = false;
+
+function allowDevelopmentWithoutRedis(): boolean {
+  if (env.NODE_ENV === "production") {
+    throw new Error(
+      "RATE_LIMIT_UNAVAILABLE: Configure UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN"
+    );
+  }
+
+  if (!warnedAboutDevelopmentBypass) {
+    console.warn("Rate limiting is disabled outside production because Upstash is not configured.");
+    warnedAboutDevelopmentBypass = true;
+  }
+  return true;
+}
+
 export async function limitAnalyze(userId: string, isPro: boolean): Promise<boolean> {
   const limiter = isPro ? proLimiter : freeLimiter;
   if (!limiter) {
-    return true;
+    return allowDevelopmentWithoutRedis();
   }
 
   const result = await limiter.limit(userId);
@@ -52,7 +68,7 @@ export async function limitAnalyze(userId: string, isPro: boolean): Promise<bool
 
 export async function limitGlobal(identifier: string): Promise<boolean> {
   if (!globalLimiter) {
-    return true;
+    return allowDevelopmentWithoutRedis();
   }
 
   const result = await globalLimiter.limit(identifier);

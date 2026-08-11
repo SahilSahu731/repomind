@@ -255,6 +255,11 @@ export default function UserSettingsPage() {
             {isExporting ? "Preparing export" : "Download workspace data"}
           </button>
           {exportError ? <p role="alert" className="mt-3 border-l-2 border-[#a33f2b] pl-3 text-xs text-[#82331f]">{exportError}</p> : null}
+          <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 border-t border-[#292721]/25 pt-5 text-xs font-semibold">
+            <Link href="/data-controls" className="underline decoration-[#d75c3f] underline-offset-4">Retention and deletion</Link>
+            <Link href="/privacy" className="underline decoration-[#d75c3f] underline-offset-4">Privacy policy</Link>
+            <Link href="/support" className="underline decoration-[#d75c3f] underline-offset-4">Contact support</Link>
+          </div>
         </article>
       </section>
 

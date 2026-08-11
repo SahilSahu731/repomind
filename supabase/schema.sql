@@ -114,3 +114,20 @@ drop trigger if exists analysis_result_set_updated_at on public."AnalysisResult"
 create trigger analysis_result_set_updated_at
 before update on public."AnalysisResult"
 for each row execute function public.set_updated_at();
+
+-- The browser never reads workspace tables directly. Enable RLS and reserve
+-- access for the trusted server-side service role used by RepoMind API routes.
+alter table public."User" enable row level security;
+alter table public."Repo" enable row level security;
+alter table public."Job" enable row level security;
+alter table public."AnalysisResult" enable row level security;
+
+revoke all on table public."User" from anon, authenticated;
+revoke all on table public."Repo" from anon, authenticated;
+revoke all on table public."Job" from anon, authenticated;
+revoke all on table public."AnalysisResult" from anon, authenticated;
+
+grant all on table public."User" to service_role;
+grant all on table public."Repo" to service_role;
+grant all on table public."Job" to service_role;
+grant all on table public."AnalysisResult" to service_role;
