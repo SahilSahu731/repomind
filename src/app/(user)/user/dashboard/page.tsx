@@ -17,6 +17,7 @@ import {
 import type { AnalysisResult } from "@/types";
 import type { JobRow, RepoRow } from "@/lib/supabaseDb";
 import { announceCreditsChanged } from "@/lib/creditBalance";
+import { useWorkspacePreferences } from "@/lib/workspacePreferences";
 import { RepositoryAnalysisReport } from "@/components/report/RepositoryAnalysisReport";
 import { RepositoryWorkspace } from "@/components/workspace/RepositoryWorkspace";
 
@@ -73,6 +74,7 @@ function analysisFailureMessage(repo: RepoRow, job: JobRow | null): string {
 
 export default function UserDashboardPage() {
   const searchParams = useSearchParams();
+  const { preferences } = useWorkspacePreferences();
   const repoId = searchParams.get("repoId");
   const repoSlug = searchParams.get("repo");
 
@@ -116,13 +118,13 @@ export default function UserDashboardPage() {
   }, [loadRepoDetails]);
 
   useEffect(() => {
-    if (!repoId) return;
+    if (!repoId || !preferences.autoRefresh) return;
     const shouldPoll = Boolean(repoStatus && repoStatus !== "COMPLETE" && repoStatus !== "FAILED");
     if (!shouldPoll) return;
 
     const interval = window.setInterval(() => void loadRepoDetails(), 3500);
     return () => window.clearInterval(interval);
-  }, [loadRepoDetails, repoId, repoStatus]);
+  }, [loadRepoDetails, preferences.autoRefresh, repoId, repoStatus]);
 
   useEffect(() => {
     if (repoStatus === "COMPLETE" || repoStatus === "FAILED") {

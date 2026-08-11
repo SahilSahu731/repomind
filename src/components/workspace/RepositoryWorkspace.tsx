@@ -20,6 +20,7 @@ import {
 import type { RepoRow } from "@/lib/supabaseDb";
 import { RepoAnalyzeBar } from "@/components/landing/RepoAnalyzeBar";
 import { announceCreditsChanged } from "@/lib/creditBalance";
+import { useWorkspacePreferences } from "@/lib/workspacePreferences";
 
 type WorkspaceFilter = "all" | "complete" | "in-progress" | "failed";
 
@@ -157,6 +158,7 @@ function WorkspaceSkeleton() {
 
 export function RepositoryWorkspace() {
   const router = useRouter();
+  const { preferences } = useWorkspacePreferences();
   const [repos, setRepos] = useState<RepoRow[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -202,14 +204,14 @@ export function RepositoryWorkspace() {
   const hasActiveRepos = repos.some((repo) => ACTIVE_STATUSES.has(repo.status));
 
   useEffect(() => {
-    if (!hasActiveRepos) return;
+    if (!hasActiveRepos || !preferences.autoRefresh) return;
 
     const interval = window.setInterval(() => {
       void loadRepositories(true);
     }, 5000);
 
     return () => window.clearInterval(interval);
-  }, [hasActiveRepos, loadRepositories]);
+  }, [hasActiveRepos, loadRepositories, preferences.autoRefresh]);
 
   const visibleRepos = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();

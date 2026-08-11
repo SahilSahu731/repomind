@@ -5,6 +5,7 @@ import { SessionProvider } from "next-auth/react";
 import { Toaster } from "react-hot-toast";
 import { useState } from "react";
 import { UserSessionSync } from "@/components/UserSessionSync";
+import { WorkspacePreferenceSync } from "@/components/WorkspacePreferenceSync";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { initAnalytics, trackPage } from "@/lib/analytics";
@@ -25,6 +26,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
       <UserSessionSync />
+      <WorkspacePreferenceSync />
       <QueryClientProvider client={queryClient}>
         {children}
         <Toaster position="top-right" />

@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import type { AnalysisResult } from "@/types";
 import type { RepoRow } from "@/lib/supabaseDb";
+import { useWorkspacePreferences } from "@/lib/workspacePreferences";
 
 interface RepositoryAnalysisReportProps {
   repo: RepoRow;
@@ -48,7 +49,7 @@ function topConnectedFiles(analysis: AnalysisResult) {
   return [...analysis.dependencyGraph.nodes]
     .map((node) => ({ ...node, score: node.inDegree + node.outDegree }))
     .sort((a, b) => b.score - a.score || b.lines - a.lines)
-    .slice(0, 12);
+    .slice(0, 16);
 }
 
 function nodePosition(index: number, total: number) {
@@ -159,6 +160,7 @@ function ArchitectureSystemMap({ analysis }: { analysis: AnalysisResult }) {
 }
 
 export function RepositoryAnalysisReport({ repo, analysis }: RepositoryAnalysisReportProps) {
+  const { preferences } = useWorkspacePreferences();
   const connectedFiles = useMemo(() => topConnectedFiles(analysis), [analysis]);
   const [selectedNodeId, setSelectedNodeId] = useState(connectedFiles[0]?.id ?? "");
   const [fileQuery, setFileQuery] = useState("");
@@ -180,7 +182,9 @@ export function RepositoryAnalysisReport({ repo, analysis }: RepositoryAnalysisR
       .slice(0, 10);
   }, [analysis.dependencyGraph.edges, selectedNode]);
 
-  const graphNodes = connectedFiles.slice(0, 10);
+  const graphNodeLimit = preferences.graphDensity === "expanded" ? 12 : 8;
+  const filePreviewLimit = preferences.reportDetail === "detailed" ? 14 : 8;
+  const graphNodes = connectedFiles.slice(0, graphNodeLimit);
   const graphNodeIds = new Set(graphNodes.map((node) => node.id));
   const graphEdges = analysis.dependencyGraph.edges.filter(
     (edge) => graphNodeIds.has(edge.source) && graphNodeIds.has(edge.target)
@@ -195,7 +199,7 @@ export function RepositoryAnalysisReport({ repo, analysis }: RepositoryAnalysisR
       ([path, summary]) => !query || path.toLowerCase().includes(query) || summary.toLowerCase().includes(query)
     );
   }, [analysis.fileSummaries, fileQuery]);
-  const visibleFiles = showAllFiles ? fileEntries : fileEntries.slice(0, 8);
+  const visibleFiles = showAllFiles ? fileEntries : fileEntries.slice(0, filePreviewLimit);
 
   const stackSections = [
     { label: "Languages", values: analysis.techStack.languages, icon: Code2 },
@@ -558,7 +562,7 @@ export function RepositoryAnalysisReport({ repo, analysis }: RepositoryAnalysisR
                 </details>
               )) : <p className="py-7 text-sm text-[#6d675f]">No analyzed files match “{fileQuery}”.</p>}
             </div>
-            {fileEntries.length > 8 ? (
+            {fileEntries.length > filePreviewLimit ? (
               <button type="button" onClick={() => setShowAllFiles((value) => !value)} className="mt-4 text-xs font-semibold underline decoration-[#d75c3f] underline-offset-4 print:hidden">
                 {showAllFiles ? "Show fewer files" : `Show all ${fileEntries.length} files`}
               </button>

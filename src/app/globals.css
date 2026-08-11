@@ -448,6 +448,15 @@ html {
   display: none;
 }
 
+.reduce-workspace-motion *,
+.reduce-workspace-motion *::before,
+.reduce-workspace-motion *::after {
+  scroll-behavior: auto !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
 @media print {
   .workspace-sidebar,
   .workspace-header,
