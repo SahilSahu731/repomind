@@ -13,7 +13,7 @@ const navLinks = [
   { href: "/#report", label: "Report" },
   { href: "/#workflow", label: "How it works" },
   { href: "/about", label: "About" },
-  { href: "/status", label: "Status" },
+  { href: "/trust", label: "Trust" },
 ];
 
 export function Navbar() {

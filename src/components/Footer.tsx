@@ -24,7 +24,7 @@ export function Footer() {
               <li><Link href="/#product" className="transition hover:text-white">Product</Link></li>
               <li><Link href="/#report" className="transition hover:text-white">Inside the report</Link></li>
               <li><Link href="/#workflow" className="transition hover:text-white">How it works</Link></li>
-              <li><Link href="/#trust" className="transition hover:text-white">Analysis boundaries</Link></li>
+              <li><Link href="/trust" className="transition hover:text-white">Analysis boundaries</Link></li>
               <li><Link href="/#faq" className="transition hover:text-white">FAQ</Link></li>
               <li><Link href="/#analyze" className="transition hover:text-white">Analyze a repository</Link></li>
               <li><Link href="/about" className="transition hover:text-white">About</Link></li>

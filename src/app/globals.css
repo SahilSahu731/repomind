@@ -83,7 +83,12 @@ html {
   .reveal,
   .stagger-in,
   .float-slow,
-  .pulse-bar {
+  .pulse-bar,
+  .loader-orbit,
+  .loader-mark,
+  .loader-halo,
+  .loader-track,
+  .loader-node {
     animation: none !important;
   }
 }
@@ -95,6 +100,17 @@ html {
 
 ::selection {
   background: rgba(215, 92, 63, 0.28);
+}
+
+a[href],
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
 }
 
 .marketing-theme {
@@ -202,6 +218,86 @@ html {
   50% {
     filter: saturate(1.25) drop-shadow(0 0 5px rgba(215, 92, 63, 0.24));
   }
+}
+
+@keyframes loaderOrbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes loaderHalo {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.18);
+  }
+}
+
+@keyframes loaderTrack {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(360%);
+  }
+}
+
+@keyframes loaderNode {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(102, 122, 96, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgba(102, 122, 96, 0);
+  }
+}
+
+.loader-orbit {
+  animation: loaderOrbit 24s linear infinite;
+}
+
+.loader-orbit::before,
+.loader-orbit::after {
+  position: absolute;
+  border-radius: 9999px;
+  background: #d75c3f;
+  content: "";
+}
+
+.loader-orbit::before {
+  left: 14%;
+  top: 7%;
+  height: 0.5rem;
+  width: 0.5rem;
+}
+
+.loader-orbit::after {
+  bottom: 12%;
+  right: 9%;
+  height: 0.375rem;
+  width: 0.375rem;
+  background: #667a60;
+}
+
+.loader-mark {
+  animation: floatDrift 5s ease-in-out infinite;
+}
+
+.loader-halo {
+  animation: loaderHalo 2.2s ease-in-out infinite;
+}
+
+.loader-track {
+  animation: loaderTrack 1.6s cubic-bezier(0.55, 0, 0.25, 1) infinite;
+}
+
+.loader-node {
+  animation: loaderNode 1.8s ease-in-out infinite;
 }
 
 .reveal {

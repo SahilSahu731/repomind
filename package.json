@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "supabase:migrate-local": "tsx scripts/migrate-local-workspace-to-supabase.ts",
     "worker": "tsx src/worker.ts",
     "worker:dev": "tsx watch src/worker.ts"
   },

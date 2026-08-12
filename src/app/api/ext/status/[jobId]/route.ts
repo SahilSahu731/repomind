@@ -1,6 +1,8 @@
 import type { NextRequest } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { corsOk, withCors } from "@/lib/cors";
-import { getJobById } from "@/lib/supabaseDb";
+import { getJobById, getRepoById } from "@/lib/supabaseDb";
 
 export async function OPTIONS(req: NextRequest) {
   return corsOk(req.headers.get("origin"));
@@ -13,6 +15,15 @@ export async function GET(
   const origin = req.headers.get("origin");
 
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return withCors(
+        { success: false, error: { code: "UNAUTHORIZED", message: "Authentication required" } },
+        origin,
+        401
+      );
+    }
+
     const { jobId } = await params;
 
     if (!jobId) {
@@ -26,6 +37,15 @@ export async function GET(
     const job = await getJobById(jobId);
 
     if (!job) {
+      return withCors(
+        { success: false, error: { code: "NOT_FOUND", message: "Job not found" } },
+        origin,
+        404
+      );
+    }
+
+    const repo = await getRepoById(job.repoId);
+    if (!repo || repo.userId !== session.user.id) {
       return withCors(
         { success: false, error: { code: "NOT_FOUND", message: "Job not found" } },
         origin,

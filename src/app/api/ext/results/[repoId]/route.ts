@@ -1,6 +1,8 @@
 import type { NextRequest } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { corsOk, withCors } from "@/lib/cors";
-import { getAnalysisResultByRepoId } from "@/lib/supabaseDb";
+import { getAnalysisResultByRepoId, getRepoById } from "@/lib/supabaseDb";
 
 export async function OPTIONS(req: NextRequest) {
   return corsOk(req.headers.get("origin"));
@@ -13,6 +15,15 @@ export async function GET(
   const origin = req.headers.get("origin");
 
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return withCors(
+        { success: false, error: { code: "UNAUTHORIZED", message: "Authentication required" } },
+        origin,
+        401
+      );
+    }
+
     const { repoId } = await params;
 
     if (!repoId) {
@@ -20,6 +31,15 @@ export async function GET(
         { success: false, error: { code: "INVALID_INPUT", message: "Missing repoId" } },
         origin,
         400
+      );
+    }
+
+    const repo = await getRepoById(repoId);
+    if (!repo || repo.userId !== session.user.id) {
+      return withCors(
+        { success: false, error: { code: "NOT_FOUND", message: "Analysis results not found" } },
+        origin,
+        404
       );
     }
 

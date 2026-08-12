@@ -6,6 +6,7 @@ const envSchema = z.object({
   GITHUB_CLIENT_SECRET: z.string().min(1),
   NEXTAUTH_SECRET: z.string().min(1),
   NEXTAUTH_URL: z.string().url(),
+  NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
   EXTENSION_ALLOWED_ORIGINS: z.string().optional(),
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON_KEY: z.string().min(1),
@@ -27,6 +28,28 @@ const envSchema = z.object({
   NEXT_PUBLIC_SENTRY_DSN: z.string().optional(),
   NEXT_PUBLIC_SUPPORT_EMAIL: z.string().email().optional(),
   RESEND_API_KEY: z.string().optional(),
+}).superRefine((values, context) => {
+  if (values.NODE_ENV !== "production") return;
+
+  const authUrl = new URL(values.NEXTAUTH_URL);
+  if (authUrl.protocol !== "https:" || ["localhost", "127.0.0.1"].includes(authUrl.hostname)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["NEXTAUTH_URL"],
+      message: "Production authentication requires the canonical HTTPS site origin",
+    });
+  }
+
+  if (values.NEXT_PUBLIC_SITE_URL) {
+    const siteUrl = new URL(values.NEXT_PUBLIC_SITE_URL);
+    if (siteUrl.origin !== authUrl.origin) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["NEXT_PUBLIC_SITE_URL"],
+        message: "Must use the same production origin as NEXTAUTH_URL",
+      });
+    }
+  }
 });
 
 const parsed = envSchema.safeParse(process.env);

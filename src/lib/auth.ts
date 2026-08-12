@@ -9,6 +9,7 @@ if (!env.GITHUB_CLIENT_ID || !env.GITHUB_CLIENT_SECRET) {
 }
 
 export const authOptions: NextAuthOptions = {
+  secret: env.NEXTAUTH_SECRET,
   providers: [
     CredentialsProvider({
       name: "Email and Password",

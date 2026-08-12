@@ -35,9 +35,10 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittingMethod, setSubmittingMethod] = useState<"github" | "email" | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const authError = searchParams.get("error");
+  const isSubmitting = submittingMethod !== null;
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,30 +50,39 @@ export default function LoginPage() {
       return;
     }
 
-    setIsSubmitting(true);
+    setSubmittingMethod("email");
 
-    const result = await signIn("credentials", {
-      redirect: false,
-      email: parsed.data.email,
-      password: parsed.data.password,
-      callbackUrl,
-    });
+    try {
+      const result = await signIn("credentials", {
+        redirect: false,
+        email: parsed.data.email,
+        password: parsed.data.password,
+        callbackUrl,
+      });
 
-    setIsSubmitting(false);
+      if (!result || result.error) {
+        setErrorMessage("Invalid email or password");
+        return;
+      }
 
-    if (!result || result.error) {
-      setErrorMessage("Invalid email or password");
-      return;
+      router.push(result.url ?? callbackUrl);
+      router.refresh();
+    } catch {
+      setErrorMessage("Could not reach the authentication service. Please try again.");
+    } finally {
+      setSubmittingMethod(null);
     }
-
-    router.push(result.url ?? callbackUrl);
-    router.refresh();
   }
 
   async function loginWithGithub() {
     setErrorMessage(null);
-    setIsSubmitting(true);
-    await signIn("github", { callbackUrl });
+    setSubmittingMethod("github");
+    try {
+      await signIn("github", { callbackUrl });
+    } catch {
+      setSubmittingMethod(null);
+      setErrorMessage("Could not start GitHub sign-in. Please try again.");
+    }
   }
 
   return (
@@ -89,9 +99,15 @@ export default function LoginPage() {
         disabled={isSubmitting}
         className="group flex h-12 w-full items-center justify-center gap-3 rounded-full bg-[#292721] px-5 text-sm font-medium text-[#f7f2e7] transition hover:bg-[#d75c3f] disabled:cursor-not-allowed disabled:opacity-60 sm:h-13"
       >
-        <Github className="h-4.5 w-4.5" />
-        Continue with GitHub
-        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+        {submittingMethod === "github" ? (
+          <LoaderCircle className="h-4.5 w-4.5 animate-spin" />
+        ) : (
+          <Github className="h-4.5 w-4.5" />
+        )}
+        {submittingMethod === "github" ? "Connecting to GitHub" : "Continue with GitHub"}
+        {submittingMethod !== "github" ? (
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+        ) : null}
       </button>
 
       <div className="my-4 flex items-center gap-4">
@@ -168,9 +184,9 @@ export default function LoginPage() {
           disabled={isSubmitting}
           className="group flex h-12 w-full items-center justify-center gap-3 rounded-full border border-[#292721] bg-transparent px-5 text-sm font-semibold text-[#292721] transition hover:bg-[#292721] hover:text-[#f7f2e7] disabled:cursor-not-allowed disabled:opacity-60 sm:h-13"
         >
-          {isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-          {isSubmitting ? "Signing in" : "Sign in with email"}
-          {!isSubmitting ? <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /> : null}
+          {submittingMethod === "email" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
+          {submittingMethod === "email" ? "Signing in" : "Sign in with email"}
+          {submittingMethod !== "email" ? <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /> : null}
         </button>
       </form>
     </AuthFrame>
