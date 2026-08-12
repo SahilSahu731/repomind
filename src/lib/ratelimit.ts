@@ -78,10 +78,10 @@ function limitInMemory(key: string, maximum: number, windowMs: number): boolean 
   return true;
 }
 
-function announceMemoryFallback(): void {
+function announceMemoryFallback(reason: "not configured" | "unavailable" = "not configured"): void {
   if (warnedAboutMemoryFallback) return;
   console.warn(
-    "Upstash rate limiting is not configured; using a single-instance in-memory limiter."
+    `Upstash rate limiting is ${reason}; using a single-instance in-memory limiter.`
   );
   warnedAboutMemoryFallback = true;
 }
@@ -97,8 +97,17 @@ export async function limitAnalyze(userId: string, isPro: boolean): Promise<bool
     );
   }
 
-  const result = await limiter.limit(userId);
-  return result.success;
+  try {
+    const result = await limiter.limit(userId);
+    return result.success;
+  } catch {
+    announceMemoryFallback("unavailable");
+    return limitInMemory(
+      `analyze:${isPro ? "pro" : "free"}:${userId}`,
+      isPro ? 30 : 3,
+      24 * 60 * 60 * 1000
+    );
+  }
 }
 
 export async function limitGlobal(identifier: string): Promise<boolean> {
@@ -107,6 +116,11 @@ export async function limitGlobal(identifier: string): Promise<boolean> {
     return limitInMemory(`global:${identifier}`, 100, 60 * 1000);
   }
 
-  const result = await globalLimiter.limit(identifier);
-  return result.success;
+  try {
+    const result = await globalLimiter.limit(identifier);
+    return result.success;
+  } catch {
+    announceMemoryFallback("unavailable");
+    return limitInMemory(`global:${identifier}`, 100, 60 * 1000);
+  }
 }

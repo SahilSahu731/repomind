@@ -40,7 +40,13 @@ export async function POST(req: Request) {
       email,
     };
 
-    return ok({ user }, 201);
+    return ok(
+      {
+        user,
+        requiresEmailConfirmation: result.requiresEmailConfirmation,
+      },
+      201
+    );
   } catch (error) {
     const signupError = getApiError(
       "SIGNUP_FAILED",

@@ -73,6 +73,7 @@ export interface JobRow {
   progress: number;
   currentStep: string | null;
   createdAt: string;
+  updatedAt?: string;
   errorLog?: string | null;
   completedAt?: string | null;
 }

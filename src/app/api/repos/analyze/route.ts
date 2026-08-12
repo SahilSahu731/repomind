@@ -17,6 +17,14 @@ import {
 } from "@/lib/supabaseDb";
 import { analyzeSchema } from "@/lib/validations/repo";
 
+export const maxDuration = 300;
+const ACTIVE_JOB_TIMEOUT_MS = 15 * 60 * 1000;
+
+function isActiveJobFresh(updatedAt: string | undefined, createdAt: string): boolean {
+  const timestamp = new Date(updatedAt ?? createdAt).getTime();
+  return Number.isFinite(timestamp) && Date.now() - timestamp < ACTIVE_JOB_TIMEOUT_MS;
+}
+
 function parseGitHubUrl(url: string): {
   owner: string;
   repo: string;
@@ -83,14 +91,31 @@ export async function POST(req: Request) {
 
     if (cached && !["COMPLETE", "FAILED"].includes(cached.status)) {
       const existingJob = await getLatestJobByRepoId(cached.id);
-      return ok(
-        {
-          alreadyRunning: true,
-          repoId: cached.id,
-          jobId: existingJob?.id,
-        },
-        202
-      );
+
+      if (existingJob && isActiveJobFresh(existingJob.updatedAt, existingJob.createdAt)) {
+        return ok(
+          {
+            alreadyRunning: true,
+            repoId: cached.id,
+            jobId: existingJob.id,
+          },
+          202
+        );
+      }
+
+      const staleMessage = "Previous analysis stopped before completion and was replaced.";
+      await Promise.all([
+        updateRepo(cached.id, { status: "FAILED", errorMessage: staleMessage }),
+        existingJob
+          ? updateJob(existingJob.id, {
+              status: "FAILED",
+              progress: 0,
+              currentStep: "failed",
+              errorLog: staleMessage,
+              completedAt: new Date().toISOString(),
+            })
+          : Promise.resolve(),
+      ]);
     }
 
     const storedUser = await getUserById(session.user.id);

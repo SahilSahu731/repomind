@@ -14,6 +14,8 @@ import {
   getUserById,
 } from "@/lib/supabaseDb";
 
+export const maxDuration = 300;
+
 export async function OPTIONS(req: NextRequest) {
   return corsOk(req.headers.get("origin"));
 }

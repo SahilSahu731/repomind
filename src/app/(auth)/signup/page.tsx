@@ -16,11 +16,13 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [submittingMethod, setSubmittingMethod] = useState<"github" | "email" | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const isSubmitting = submittingMethod !== null;
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage(null);
+    setSuccessMessage(null);
 
     const parsed = signupSchema.safeParse({ name, email, password });
     if (!parsed.success) {
@@ -38,7 +40,13 @@ export default function SignupPage() {
       });
 
       const payload = (await response.json().catch(() => null)) as
-        | { success: true; data: { user: { id: string; email: string } } }
+        | {
+            success: true;
+            data: {
+              user: { id: string; email: string };
+              requiresEmailConfirmation: boolean;
+            };
+          }
         | { success: false; error: { code: string; message: string } }
         | null;
 
@@ -47,6 +55,14 @@ export default function SignupPage() {
           payload && !payload.success
             ? payload.error.message
             : "Could not create account. Please try again."
+        );
+        return;
+      }
+
+      if (payload.data.requiresEmailConfirmation) {
+        setPassword("");
+        setSuccessMessage(
+          "Account created. Check your email to confirm it, then return here to sign in."
         );
         return;
       }
@@ -74,6 +90,7 @@ export default function SignupPage() {
 
   async function signupWithGithub() {
     setErrorMessage(null);
+    setSuccessMessage(null);
     setSubmittingMethod("github");
     try {
       await signIn("github", { callbackUrl: "/user/dashboard" });
@@ -192,6 +209,12 @@ export default function SignupPage() {
         {errorMessage && (
           <div role="alert" className="border-l-2 border-[#a33f2b] bg-[#d75c3f]/10 px-4 py-3 text-sm leading-6 text-[#82331f]">
             {errorMessage}
+          </div>
+        )}
+
+        {successMessage && (
+          <div role="status" className="border-l-2 border-[#667a60] bg-[#667a60]/10 px-4 py-3 text-sm leading-6 text-[#43533f]">
+            {successMessage}
           </div>
         )}
 

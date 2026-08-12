@@ -61,7 +61,7 @@ const nextConfig: NextConfig = {
         headers: privateAuthHeaders,
       },
       {
-        source: "/api/auth/:path*",
+        source: "/api/:path*",
         headers: privateAuthHeaders,
       },
     ];

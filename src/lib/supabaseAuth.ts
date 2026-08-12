@@ -17,9 +17,13 @@ interface SupabaseAuthUser {
 
 interface SupabaseAuthResponse {
   user?: SupabaseAuthUser;
+  access_token?: string;
   error?: {
     message?: string;
   };
+  error_description?: string;
+  message?: string;
+  msg?: string;
 }
 
 function getSupabaseAuthConfig(): { url: string; key: string } {
@@ -74,7 +78,12 @@ async function callSupabaseAuth(
   if (!response.ok) {
     return {
       error: {
-        message: payload.error?.message ?? "Supabase authentication failed",
+        message:
+          payload.error?.message ??
+          payload.message ??
+          payload.msg ??
+          payload.error_description ??
+          "Supabase authentication failed",
       },
     };
   }
@@ -99,10 +108,13 @@ export async function supabaseSignUpWithPassword(
   password: string
 ) {
   if (canUseLocalAuth()) {
-    return localSignUpWithPassword(name, email, password);
+    return {
+      ...(await localSignUpWithPassword(name, email, password)),
+      requiresEmailConfirmation: false,
+    };
   }
 
-  return callSupabaseAuth("signup", {
+  const result = await callSupabaseAuth("signup", {
     email,
     password,
     data: {
@@ -110,4 +122,9 @@ export async function supabaseSignUpWithPassword(
       full_name: name,
     },
   });
+
+  return {
+    ...result,
+    requiresEmailConfirmation: Boolean(result.user?.id && !result.access_token),
+  };
 }

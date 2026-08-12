@@ -1,4 +1,5 @@
 import { Queue, type ConnectionOptions } from "bullmq";
+import { after } from "next/server";
 import { env } from "@/lib/env";
 import { shouldUseLocalWorkspaceDatabase } from "@/lib/runtimeMode";
 import {
@@ -32,12 +33,16 @@ export function getBullMqConnectionOptions(
 
 export async function enqueueAnalyzeRepoJob(payload: AnalyzeRepoJobData): Promise<void> {
   if (shouldUseLocalWorkspaceDatabase() || env.ANALYSIS_EXECUTION_MODE === "inline") {
-    inlineQueue = inlineQueue
-      .then(() => processAnalyzeRepoJob(payload))
-      .catch((error: unknown) => {
+    // Keep the serverless invocation alive after the 202 response. A detached
+    // promise can be terminated as soon as Vercel finishes the request.
+    after(async () => {
+      const operation = inlineQueue.then(() => processAnalyzeRepoJob(payload));
+      inlineQueue = operation.catch((error: unknown) => {
         const message = error instanceof Error ? error.message : "Unknown analysis error";
         console.error(`[analysis:${payload.jobId}] ${message}`);
       });
+      await inlineQueue;
+    });
     return;
   }
 
