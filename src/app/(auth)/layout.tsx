@@ -1,9 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
 import { ArrowUpLeft } from "lucide-react";
-import { authOptions } from "@/lib/auth";
 import { BrandMark } from "@/components/BrandMark";
 
 export const metadata: Metadata = {
@@ -13,16 +10,6 @@ export const metadata: Metadata = {
 };
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
-  return <AuthLayoutContent>{children}</AuthLayoutContent>;
-}
-
-async function AuthLayoutContent({ children }: { children: React.ReactNode }) {
-  const session = await getServerSession(authOptions);
-
-  if (session?.user?.id) {
-    redirect("/user/dashboard");
-  }
-
   return (
     <div className="marketing-theme h-svh overflow-hidden bg-[#f5f0e5] text-[#292721]">
       <a

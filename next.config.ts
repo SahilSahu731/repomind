@@ -33,6 +33,13 @@ const securityHeaders = [
     : []),
 ];
 
+const privateAuthHeaders = [
+  {
+    key: "Cache-Control",
+    value: "private, no-cache, no-store, max-age=0, must-revalidate",
+  },
+];
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   async headers() {
@@ -40,6 +47,22 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: securityHeaders,
+      },
+      {
+        source: "/login",
+        headers: privateAuthHeaders,
+      },
+      {
+        source: "/signup",
+        headers: privateAuthHeaders,
+      },
+      {
+        source: "/user/:path*",
+        headers: privateAuthHeaders,
+      },
+      {
+        source: "/api/auth/:path*",
+        headers: privateAuthHeaders,
       },
     ];
   },

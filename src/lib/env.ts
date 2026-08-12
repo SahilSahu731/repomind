@@ -32,11 +32,20 @@ const envSchema = z.object({
   if (values.NODE_ENV !== "production") return;
 
   const authUrl = new URL(values.NEXTAUTH_URL);
-  if (authUrl.protocol !== "https:" || ["localhost", "127.0.0.1"].includes(authUrl.hostname)) {
+  const isLoopbackOrigin = ["localhost", "127.0.0.1", "::1"].includes(authUrl.hostname);
+  const isHostedDeployment = process.env.VERCEL === "1";
+
+  // `next build` always uses NODE_ENV=production, including local builds.
+  // Permit HTTP only for a local loopback origin; hosted deployments and all
+  // non-local production origins must still use canonical HTTPS.
+  if (
+    (isHostedDeployment && isLoopbackOrigin) ||
+    (!isLoopbackOrigin && authUrl.protocol !== "https:")
+  ) {
     context.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["NEXTAUTH_URL"],
-      message: "Production authentication requires the canonical HTTPS site origin",
+      message: "Non-local production authentication requires the canonical HTTPS site origin",
     });
   }
 
