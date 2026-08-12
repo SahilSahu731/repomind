@@ -158,12 +158,13 @@ function injectScanButton(info: RepoInfo): void {
       box-shadow: 0 4px 24px rgba(99, 102, 241, 0.4), 0 2px 8px rgba(0,0,0,0.1);
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       backdrop-filter: blur(8px);
-    }
-
-    button:hover {
-      transform: translateY(-2px) scale(1.03);
-      box-shadow: 0 8px 32px rgba(99, 102, 241, 0.5), 0 4px 12px rgba(0,0,0,0.15);
-      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      }
+      
+      button:hover {
+        transform: translateY(-2px) scale(1.03);
+        box-shadow: 0 8px 32px rgba(99, 102, 241, 0.5), 0 4px 12px rgba(0,0,0,0.15);
+        background: linear-gradient(135deg, #4f46e5, #7c3aed);
+        cursor: pointer;
     }
 
     button:active {

@@ -12,8 +12,8 @@ const navLinks = [
   { href: "/#product", label: "Product" },
   { href: "/#report", label: "Report" },
   { href: "/#workflow", label: "How it works" },
-  { href: "/#trust", label: "Trust" },
-  { href: "/#pricing", label: "Access" },
+  { href: "/about", label: "About" },
+  { href: "/status", label: "Status" },
 ];
 
 export function Navbar() {

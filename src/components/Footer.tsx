@@ -27,6 +27,7 @@ export function Footer() {
               <li><Link href="/#trust" className="transition hover:text-white">Analysis boundaries</Link></li>
               <li><Link href="/#faq" className="transition hover:text-white">FAQ</Link></li>
               <li><Link href="/#analyze" className="transition hover:text-white">Analyze a repository</Link></li>
+              <li><Link href="/about" className="transition hover:text-white">About</Link></li>
             </ul>
           </div>
 
@@ -46,6 +47,7 @@ export function Footer() {
               <li><Link href="/terms" className="transition hover:text-white">Terms</Link></li>
               <li><Link href="/data-controls" className="transition hover:text-white">Data controls</Link></li>
               <li><Link href="/support" className="transition hover:text-white">Support</Link></li>
+              <li><Link href="/status" className="transition hover:text-white">System status</Link></li>
             </ul>
           </div>
         </div>
