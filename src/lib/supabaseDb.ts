@@ -409,9 +409,30 @@ export async function createAnalysisResult(input: AnalysisResultInput): Promise<
     return localCreateAnalysisResult(input);
   }
 
-  await supabaseRequestWithTableFallback<unknown[]>("AnalysisResult", "", "POST", { ...input }, {
-    preferReturnRepresentation: false,
-  });
+  try {
+    await supabaseRequestWithTableFallback<unknown[]>("AnalysisResult", "", "POST", { ...input }, {
+      preferReturnRepresentation: false,
+    });
+  } catch (error: unknown) {
+    const contributionColumnMissing =
+      error instanceof Error &&
+      error.message.includes("PGRST204") &&
+      error.message.includes("contributionScore");
+
+    if (!contributionColumnMissing) {
+      throw error;
+    }
+
+    const compatibleInput: Record<string, unknown> = { ...input };
+    delete compatibleInput.contributionScore;
+    await supabaseRequestWithTableFallback<unknown[]>(
+      "AnalysisResult",
+      "",
+      "POST",
+      compatibleInput,
+      { preferReturnRepresentation: false }
+    );
+  }
 }
 
 export async function updateRepo(
