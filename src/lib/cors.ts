@@ -13,8 +13,32 @@ const developmentOrigins = env.NODE_ENV === "production"
 
 const allowedOrigins = new Set([siteOrigin, ...configuredOrigins, ...developmentOrigins]);
 
+const extensionOriginPattern = /^chrome-extension:\/\/[a-p]{32}$/;
+
 function isAllowedOrigin(origin: string | null): boolean {
-  return origin === null || allowedOrigins.has(origin.replace(/\/$/, ""));
+  if (origin === null) return true;
+
+  const normalizedOrigin = origin.replace(/\/$/, "");
+  if (allowedOrigins.has(normalizedOrigin)) return true;
+
+  return env.NODE_ENV !== "production" && extensionOriginPattern.test(normalizedOrigin);
+}
+
+export function rejectDisallowedCorsOrigin(origin: string | null): NextResponse | null {
+  if (isAllowedOrigin(origin)) return null;
+
+  return NextResponse.json(
+    { success: false, error: { code: "ORIGIN_NOT_ALLOWED", message: "Origin is not allowed" } },
+    { status: 403, headers: { Vary: "Origin" } }
+  );
+}
+
+export function isAllowedExtensionOrigin(origin: string): boolean {
+  const normalizedOrigin = origin.replace(/\/$/, "");
+  return extensionOriginPattern.test(normalizedOrigin) && (
+    configuredOrigins.includes(normalizedOrigin) ||
+    env.NODE_ENV !== "production"
+  );
 }
 
 export function corsHeaders(origin: string | null): Record<string, string> {
@@ -33,12 +57,8 @@ export function corsHeaders(origin: string | null): Record<string, string> {
 }
 
 export function corsOk(origin: string | null): NextResponse {
-  if (!isAllowedOrigin(origin)) {
-    return NextResponse.json(
-      { success: false, error: { code: "ORIGIN_NOT_ALLOWED", message: "Origin is not allowed" } },
-      { status: 403, headers: { Vary: "Origin" } }
-    );
-  }
+  const rejection = rejectDisallowedCorsOrigin(origin);
+  if (rejection) return rejection;
 
   return new NextResponse(null, {
     status: 204,
@@ -51,12 +71,8 @@ export function withCors<T>(
   origin: string | null,
   status = 200
 ): NextResponse {
-  if (!isAllowedOrigin(origin)) {
-    return NextResponse.json(
-      { success: false, error: { code: "ORIGIN_NOT_ALLOWED", message: "Origin is not allowed" } },
-      { status: 403, headers: { Vary: "Origin" } }
-    );
-  }
+  const rejection = rejectDisallowedCorsOrigin(origin);
+  if (rejection) return rejection;
 
   return NextResponse.json(json, {
     status,

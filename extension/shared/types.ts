@@ -2,19 +2,25 @@
 
 export type MessageType =
   | "DETECT_REPO"
+  | "CLEAR_REPO"
   | "REPO_DETECTED"
+  | "CONTEXT_UPDATED"
   | "START_ANALYSIS"
+  | "POLL_ANALYSIS"
   | "ANALYSIS_PROGRESS"
   | "ANALYSIS_COMPLETE"
   | "ANALYSIS_ERROR"
   | "CHAT_MESSAGE"
   | "CHAT_RESPONSE"
+  | "COMPARE_REPOS"
   | "INJECT_BADGES"
   | "AUTH_STATUS"
+  | "AUTH_ERROR"
   | "GET_AUTH"
   | "LOGIN"
   | "LOGOUT"
   | "GET_CACHED_ANALYSIS"
+  | "GET_CONTEXT"
   | "OPEN_SIDE_PANEL";
 
 export interface RepoInfo {
@@ -120,7 +126,7 @@ export interface UserInfo {
   name: string;
   email: string;
   image: string;
-  plan: "FREE" | "PRO";
+  plan: "FREE" | "PRO" | "ENTERPRISE";
   creditsRemaining: number;
   githubUsername: string;
 }
@@ -162,21 +168,24 @@ export interface AuthStatusMessage extends Message<{ isLoggedIn: boolean; user?:
 
 /* ─── Constants ─── */
 
-export const API_BASE_URL = "https://repomind.vercel.app";
-// Use this for local development:
-// export const API_BASE_URL = "http://localhost:3000";
+const configuredApiUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+const defaultApiUrl = import.meta.env.DEV
+  ? "http://localhost:3000"
+  : "https://repomind.vercel.app";
+
+export const API_BASE_URL = (configuredApiUrl || defaultApiUrl).replace(/\/$/, "");
 
 export const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-export const ANALYSIS_STEPS: Record<string, { label: string; icon: string }> = {
-  queued: { label: "Queued", icon: "⏳" },
-  cloning: { label: "Cloning repository...", icon: "📦" },
-  parsing: { label: "Parsing file structure...", icon: "🔍" },
-  detecting_stack: { label: "Detecting tech stack...", icon: "🛠️" },
-  building_graph: { label: "Building dependency graph...", icon: "🕸️" },
-  detecting_entries: { label: "Finding entry points...", icon: "🚪" },
-  ai_analysis: { label: "AI is analyzing...", icon: "🧠" },
-  storing_results: { label: "Saving results...", icon: "💾" },
-  complete: { label: "Analysis complete!", icon: "✅" },
-  failed: { label: "Analysis failed", icon: "❌" },
+export const ANALYSIS_STEPS: Record<string, { label: string }> = {
+  queued: { label: "Queued" },
+  cloning: { label: "Cloning repository..." },
+  parsing: { label: "Parsing file structure..." },
+  detecting_stack: { label: "Detecting tech stack..." },
+  building_graph: { label: "Building dependency graph..." },
+  detecting_entries: { label: "Finding entry points..." },
+  ai_analysis: { label: "AI is analyzing..." },
+  storing_results: { label: "Saving results..." },
+  complete: { label: "Analysis complete" },
+  failed: { label: "Analysis failed" },
 };

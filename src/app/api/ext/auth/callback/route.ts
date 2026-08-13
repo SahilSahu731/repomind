@@ -1,57 +1,63 @@
 import { getServerSession } from "next-auth";
+import type { NextRequest } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { env } from "@/lib/env";
+import {
+  isValidExtensionState,
+  issueExtensionToken,
+  validateExtensionId,
+  validateExtensionRedirectUri,
+} from "@/lib/extensionAuth";
 
-export async function GET() {
-  // This is the callback URL after successful NextAuth sign-in.
-  // The user will already have a session cookie set by NextAuth.
-  // We create a simple token (the session user's ID) and redirect
-  // to a page that the extension's background worker can detect.
+export async function GET(req: NextRequest) {
+  const state = req.nextUrl.searchParams.get("state");
+  const isTabFlow = req.nextUrl.searchParams.get("flow") === "tab";
+  const extensionId = isTabFlow
+    ? validateExtensionId(req.nextUrl.searchParams.get("extension_id"))
+    : null;
+  const redirectUri = validateExtensionRedirectUri(
+    req.nextUrl.searchParams.get("redirect_uri")
+  );
+
+  if (!isValidExtensionState(state) || (isTabFlow ? !extensionId : !redirectUri)) {
+    return Response.json(
+      { success: false, error: "Invalid extension authentication callback" },
+      { status: 400 }
+    );
+  }
 
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
-    // Auth failed — redirect to login
-    return Response.redirect(`${env.NEXTAUTH_URL}/login`);
+    const loginUrl = new URL("/login", env.NEXTAUTH_URL);
+    loginUrl.searchParams.set("callbackUrl", req.nextUrl.toString());
+    return Response.redirect(loginUrl, 302);
   }
 
-  // Generate a simple token for the extension (the session cookie itself
-  // handles real auth, but the extension needs something to store).
-  // In production, you'd want a proper JWT here.
-  const token = Buffer.from(
-    JSON.stringify({
-      userId: session.user.id,
-      ts: Date.now(),
-    })
-  ).toString("base64url");
+  const token = await issueExtensionToken({
+    id: session.user.id,
+    name: session.user.name ?? null,
+    email: session.user.email ?? null,
+    image: session.user.image ?? null,
+    githubUsername: session.user.githubUsername ?? null,
+    plan: session.user.plan,
+    creditsRemaining: session.user.creditsRemaining,
+  });
 
-  // Redirect to a URL the extension's background worker detects
-  const redirectUrl = new URL(`${env.NEXTAUTH_URL}/api/ext/auth/callback`);
-  redirectUrl.searchParams.set("token", token);
-  redirectUrl.searchParams.set("success", "true");
+  const destination = isTabFlow
+    ? new URL("/api/ext/auth/complete", env.NEXTAUTH_URL)
+    : redirectUri;
+  if (!destination) {
+    return Response.json({ success: false, error: "Invalid extension callback" }, { status: 400 });
+  }
+  destination.hash = new URLSearchParams({ token, state }).toString();
 
-  // Return an HTML page that shows success and auto-closes
-  return new Response(
-    `<!DOCTYPE html>
-<html>
-<head><title>RepoMind — Signed In</title></head>
-<body style="font-family:system-ui;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#0d1117;color:#e6edf3;">
-  <div style="text-align:center;">
-    <div style="font-size:3rem;margin-bottom:1rem;">✅</div>
-    <h1 style="font-size:1.5rem;margin-bottom:0.5rem;">Signed in to RepoMind</h1>
-    <p style="color:#8b949e;">You can close this tab. The extension is now connected.</p>
-    <script>
-      // The extension's background worker listens for this URL pattern
-      // and extracts the token from the URL params.
-      // Auto-close after a short delay
-      setTimeout(() => window.close(), 2000);
-    </script>
-  </div>
-</body>
-</html>`,
-    {
-      status: 200,
-      headers: { "Content-Type": "text/html" },
-    }
-  );
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: destination.toString(),
+      "Cache-Control": "no-store",
+      "Referrer-Policy": "no-referrer",
+    },
+  });
 }

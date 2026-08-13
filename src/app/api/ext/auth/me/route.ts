@@ -1,7 +1,6 @@
 import type { NextRequest } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { corsOk, withCors } from "@/lib/cors";
+import { corsOk, rejectDisallowedCorsOrigin, withCors } from "@/lib/cors";
+import { getExtensionPrincipal } from "@/lib/extensionAuth";
 import { getUserById } from "@/lib/supabaseDb";
 
 export async function OPTIONS(req: NextRequest) {
@@ -10,11 +9,13 @@ export async function OPTIONS(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   const origin = req.headers.get("origin");
+  const originRejection = rejectDisallowedCorsOrigin(origin);
+  if (originRejection) return originRejection;
 
   try {
-    const session = await getServerSession(authOptions);
+    const principal = await getExtensionPrincipal(req);
 
-    if (!session?.user?.id) {
+    if (!principal) {
       return withCors(
         { success: false, error: { code: "UNAUTHORIZED", message: "Not authenticated" } },
         origin,
@@ -23,19 +24,19 @@ export async function GET(req: NextRequest) {
     }
 
     // Get fresh user data from DB
-    const dbUser = await getUserById(session.user.id);
+    const dbUser = await getUserById(principal.id);
 
     return withCors(
       {
         success: true,
         data: {
-          id: session.user.id,
-          name: session.user.name ?? "",
-          email: session.user.email ?? "",
-          image: session.user.image ?? "",
-          plan: dbUser?.plan ?? session.user.plan ?? "FREE",
-          creditsRemaining: dbUser?.creditsRemaining ?? session.user.creditsRemaining ?? 3,
-          githubUsername: session.user.githubUsername ?? "",
+          id: principal.id,
+          name: principal.name ?? "",
+          email: principal.email ?? "",
+          image: principal.image ?? "",
+          plan: dbUser?.plan ?? principal.plan,
+          creditsRemaining: dbUser?.creditsRemaining ?? principal.creditsRemaining,
+          githubUsername: principal.githubUsername ?? "",
         },
       },
       origin

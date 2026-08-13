@@ -1,15 +1,19 @@
 {
   "manifest_version": 3,
-  "name": "RepoMind — AI GitHub Repo Analyzer",
-  "version": "0.1.0",
-  "description": "Understand any GitHub repository in seconds. One-click AI analysis with architecture maps, dependency graphs, onboarding guides, and conversational AI.",
+  "name": "RepoMind — GitHub Repository Intelligence",
+  "short_name": "RepoMind",
+  "version": "0.1.1",
+  "description": "Understand a public GitHub repository before you change it. Map architecture, dependencies, entry points, and your route in.",
+  "minimum_chrome_version": "116",
   "permissions": [
     "activeTab",
+    "alarms",
     "sidePanel",
     "storage"
   ],
   "host_permissions": [
-    "https://github.com/*"
+    "https://github.com/*",
+    "https://repomind.vercel.app/*"
   ],
   "action": {
     "default_icon": {
@@ -18,7 +22,7 @@
       "48": "icons/icon-48.png",
       "128": "icons/icon-128.png"
     },
-    "default_title": "RepoMind — Scan this repo"
+    "default_title": "Understand this repository with RepoMind"
   },
   "side_panel": {
     "default_path": "panel/index.html"
@@ -30,10 +34,10 @@
   "content_scripts": [
     {
       "js": [
-        "assets/detector.ts-CNVb383z.js"
+        "assets/detector.ts-loader-Dyc8hlPP.js"
       ],
       "matches": [
-        "https://github.com/*"
+        "https://github.com/*/*"
       ],
       "css": [
         "content/styles.css"
@@ -53,7 +57,8 @@
         "https://github.com/*"
       ],
       "resources": [
-        "assets/detector.ts-CNVb383z.js"
+        "assets/github-qQ8zR5Dq.js",
+        "assets/detector.ts-BBEQkiDK.js"
       ],
       "use_dynamic_url": false
     }

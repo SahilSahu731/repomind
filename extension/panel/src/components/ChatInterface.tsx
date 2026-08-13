@@ -1,40 +1,118 @@
-import { useState, useRef, useEffect } from "react";
-import { useStore } from "../store";
+import { useEffect, useRef, useState } from "react";
+import { ArrowUpRight, CircleAlert, LoaderCircle, MessageSquareText, Send } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { ChatMessage } from "../../../shared/types";
 
 interface Props {
   repoId: string;
 }
 
+interface ChatResponse {
+  ok?: boolean;
+  response?: unknown;
+  error?: string;
+}
+
 const SUGGESTED_QUESTIONS = [
   "How does authentication work?",
-  "What's the database schema?",
+  "What is the database schema?",
   "How do I add a new API endpoint?",
-  "What are the main design patterns used?",
-  "Where is the business logic?",
+  "Which design patterns shape this repository?",
+  "Where does the core business logic live?",
 ];
 
+const MAX_STORED_MESSAGES = 50;
+
+function isChatMessage(value: unknown): value is ChatMessage {
+  if (!value || typeof value !== "object") return false;
+
+  const candidate = value as Partial<ChatMessage>;
+  return (
+    typeof candidate.id === "string" &&
+    (candidate.role === "user" || candidate.role === "assistant") &&
+    typeof candidate.content === "string" &&
+    typeof candidate.timestamp === "number"
+  );
+}
+
+function createMessage(
+  role: ChatMessage["role"],
+  content: string,
+  prefix: string = role
+): ChatMessage {
+  return {
+    id: `${prefix}-${crypto.randomUUID()}`,
+    role,
+    content,
+    timestamp: Date.now(),
+  };
+}
+
+function persistMessages(storageKey: string, messages: ChatMessage[]): void {
+  void chrome.storage.local
+    .set({ [storageKey]: messages.slice(-MAX_STORED_MESSAGES) })
+    .catch(() => undefined);
+}
+
 export function ChatInterface({ repoId }: Props) {
-  const { chatMessages, addChatMessage } = useStore();
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const activeRepoRef = useRef(repoId);
+  const storageKey = `chat:${repoId}`;
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [chatMessages]);
+    activeRepoRef.current = repoId;
+    let cancelled = false;
+
+    setChatMessages([]);
+    setInput("");
+    setIsLoading(false);
+    setIsRestoring(true);
+
+    void chrome.storage.local
+      .get(storageKey)
+      .then((result) => {
+        if (cancelled) return;
+
+        const stored = result[storageKey];
+        const restored = Array.isArray(stored) ? stored.filter(isChatMessage) : [];
+        setChatMessages(restored.slice(-MAX_STORED_MESSAGES));
+      })
+      .catch(() => {
+        if (!cancelled) setChatMessages([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsRestoring(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [repoId, storageKey]);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [chatMessages, isLoading]);
 
   const sendMessage = async (text: string) => {
-    if (!text.trim() || isLoading) return;
+    const normalized = text.trim();
+    if (!normalized || isLoading || isRestoring) return;
 
-    const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      content: text.trim(),
-      timestamp: Date.now(),
-    };
+    const requestRepoId = repoId;
+    const requestStorageKey = storageKey;
+    const previousMessages = chatMessages;
+    const userMessage = createMessage("user", normalized);
+    const withUser = [...previousMessages, userMessage].slice(-MAX_STORED_MESSAGES);
 
-    addChatMessage(userMsg);
+    setChatMessages(withUser);
+    persistMessages(requestStorageKey, withUser);
     setInput("");
     setIsLoading(true);
 
@@ -43,148 +121,299 @@ export function ChatInterface({ repoId }: Props) {
         chrome.runtime.sendMessage(
           {
             type: "CHAT_MESSAGE",
-            payload: { repoId, message: text.trim(), history: chatMessages },
+            payload: {
+              repoId: requestRepoId,
+              message: normalized,
+              history: previousMessages,
+            },
           },
-          (res) => {
-            if (res?.ok) resolve(res.response);
-            else reject(new Error(res?.error ?? "Chat failed"));
+          (result: ChatResponse | undefined) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+              return;
+            }
+
+            if (result?.ok && typeof result.response === "string") {
+              resolve(result.response);
+              return;
+            }
+
+            reject(new Error(result?.error ?? "Chat failed"));
           }
         );
       });
 
-      const assistantMsg: ChatMessage = {
-        id: `assistant-${Date.now()}`,
-        role: "assistant",
-        content: response,
-        timestamp: Date.now(),
-      };
+      const assistantMessage = createMessage("assistant", response);
+      const completed = [...withUser, assistantMessage].slice(-MAX_STORED_MESSAGES);
+      persistMessages(requestStorageKey, completed);
 
-      addChatMessage(assistantMsg);
-    } catch {
-      addChatMessage({
-        id: `error-${Date.now()}`,
-        role: "assistant",
-        content: "Sorry, I couldn't process that. Please try again.",
-        timestamp: Date.now(),
-      });
+      if (activeRepoRef.current === requestRepoId) {
+        setChatMessages(completed);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "The request could not be completed.";
+      const errorMessage = createMessage(
+        "assistant",
+        `I could not answer that question. ${message}`,
+        "error"
+      );
+      const completed = [...withUser, errorMessage].slice(-MAX_STORED_MESSAGES);
+      persistMessages(requestStorageKey, completed);
+
+      if (activeRepoRef.current === requestRepoId) {
+        setChatMessages(completed);
+      }
     } finally {
-      setIsLoading(false);
+      if (activeRepoRef.current === requestRepoId) {
+        setIsLoading(false);
+      }
     }
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 160px)" }}>
-      {/* Messages */}
+    <section
+      aria-label="Repository chat"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 420,
+        height: "calc(100vh - 160px)",
+        border: "1px solid var(--border-primary)",
+        borderRadius: "var(--radius-sm)",
+        background: "var(--bg-card)",
+        overflow: "hidden",
+      }}
+    >
+      <header
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--space-sm)",
+          padding: "var(--space-md) var(--space-lg)",
+          borderBottom: "1px solid var(--border-primary)",
+        }}
+      >
+        <MessageSquareText size={17} aria-hidden="true" />
+        <div>
+          <p
+            style={{
+              color: "var(--text-tertiary)",
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.64rem",
+              fontWeight: 600,
+              letterSpacing: "0.14em",
+              lineHeight: 1.2,
+              textTransform: "uppercase",
+            }}
+          >
+            Repository context
+          </p>
+          <h2
+            style={{
+              marginTop: 2,
+              fontFamily: "var(--font-serif, Georgia, serif)",
+              fontSize: "1rem",
+              fontWeight: 500,
+            }}
+          >
+            Ask RepoMind
+          </h2>
+        </div>
+      </header>
+
       <div
         ref={scrollRef}
-        style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column", gap: "var(--space-md)" }}
+        aria-live="polite"
+        style={{
+          flex: 1,
+          overflow: "auto",
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--space-md)",
+          padding: "var(--space-lg)",
+        }}
       >
-        {chatMessages.length === 0 && (
-          <div style={{ textAlign: "center", padding: "var(--space-xl)" }}>
-            <div style={{ fontSize: "2rem", marginBottom: "var(--space-md)" }}>💬</div>
-            <h3 style={{ fontSize: "0.95rem", marginBottom: "var(--space-sm)" }}>
-              Ask anything about this repo
+        {!isRestoring && chatMessages.length === 0 && (
+          <div style={{ margin: "auto 0", padding: "var(--space-md) 0" }}>
+            <h3
+              style={{
+                fontFamily: "var(--font-serif, Georgia, serif)",
+                fontSize: "1.25rem",
+                fontWeight: 500,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              Explore the codebase in conversation.
             </h3>
-            <p style={{ fontSize: "0.8rem", marginBottom: "var(--space-lg)" }}>
-              AI answers are grounded in the actual codebase structure.
+            <p style={{ marginTop: "var(--space-xs)", fontSize: "0.8rem" }}>
+              Answers use the repository analysis currently open in this panel.
             </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
-              {SUGGESTED_QUESTIONS.map((q) => (
+            <div style={{ display: "grid", gap: "var(--space-xs)", marginTop: "var(--space-lg)" }}>
+              {SUGGESTED_QUESTIONS.map((question) => (
                 <button
-                  key={q}
+                  key={question}
+                  type="button"
                   className="btn btn--ghost btn--sm"
-                  style={{ justifyContent: "flex-start", fontSize: "0.8rem" }}
-                  onClick={() => sendMessage(q)}
+                  style={{
+                    justifyContent: "space-between",
+                    minHeight: 38,
+                    textAlign: "left",
+                    whiteSpace: "normal",
+                  }}
+                  onClick={() => void sendMessage(question)}
                 >
-                  💡 {q}
+                  <span>{question}</span>
+                  <ArrowUpRight size={14} aria-hidden="true" />
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {chatMessages.map((msg) => (
+        {isRestoring && (
           <div
-            key={msg.id}
             style={{
+              margin: "auto",
               display: "flex",
-              justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+              alignItems: "center",
+              gap: "var(--space-sm)",
+              color: "var(--text-tertiary)",
+              fontSize: "0.78rem",
             }}
           >
-            <div
+            <LoaderCircle className="animate-spin" size={16} aria-hidden="true" />
+            Restoring this repository&apos;s conversation
+          </div>
+        )}
+
+        {chatMessages.map((message) => {
+          const isUser = message.role === "user";
+          const isError = message.id.startsWith("error-");
+
+          return (
+            <article
+              key={message.id}
               style={{
-                maxWidth: "85%",
-                padding: "var(--space-sm) var(--space-md)",
-                borderRadius: "var(--radius-lg)",
-                background: msg.role === "user" ? "var(--accent-light)" : "var(--bg-tertiary)",
-                border: `1px solid ${msg.role === "user" ? "var(--border-accent)" : "var(--border-subtle)"}`,
-                fontSize: "0.85rem",
-                lineHeight: 1.6,
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
+                display: "flex",
+                justifyContent: isUser ? "flex-end" : "flex-start",
               }}
             >
-              {msg.content}
-            </div>
-          </div>
-        ))}
+              <div
+                style={{
+                  width: "fit-content",
+                  maxWidth: "90%",
+                  padding: "var(--space-sm) var(--space-md)",
+                  borderRadius: "var(--radius-sm)",
+                  background: isUser ? "var(--accent-light)" : "var(--bg-tertiary)",
+                  border: `1px solid ${
+                    isError
+                      ? "var(--danger)"
+                      : isUser
+                        ? "var(--border-accent)"
+                        : "var(--border-subtle)"
+                  }`,
+                  color: "var(--text-primary)",
+                  fontSize: "0.82rem",
+                  lineHeight: 1.65,
+                  overflowWrap: "anywhere",
+                }}
+              >
+                {isError && (
+                  <CircleAlert
+                    size={14}
+                    color="var(--danger)"
+                    aria-hidden="true"
+                    style={{ marginBottom: "var(--space-xs)" }}
+                  />
+                )}
+                {isUser ? (
+                  <span style={{ whiteSpace: "pre-wrap" }}>{message.content}</span>
+                ) : (
+                  <div className="markdown-body">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        a: ({ node, ...props }) => {
+                          void node;
+                          return <a {...props} target="_blank" rel="noopener noreferrer" />;
+                        },
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                  </div>
+                )}
+              </div>
+            </article>
+          );
+        })}
 
         {isLoading && (
-          <div style={{ display: "flex", justifyContent: "flex-start" }}>
-            <div
-              style={{
-                padding: "var(--space-sm) var(--space-md)",
-                borderRadius: "var(--radius-lg)",
-                background: "var(--bg-tertiary)",
-                border: "1px solid var(--border-subtle)",
-                fontSize: "0.85rem",
-                color: "var(--text-tertiary)",
-              }}
-            >
-              <span className="animate-pulse-glow" style={{ display: "inline-block" }}>
-                Thinking...
-              </span>
-            </div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-sm)",
+              color: "var(--text-tertiary)",
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.7rem",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
+          >
+            <LoaderCircle className="animate-spin" size={15} aria-hidden="true" />
+            Reading the analysis
           </div>
         )}
       </div>
 
-      {/* Input */}
-      <div
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          void sendMessage(input);
+        }}
         style={{
           display: "flex",
           gap: "var(--space-sm)",
-          padding: "var(--space-md) 0 0",
+          padding: "var(--space-md)",
           borderTop: "1px solid var(--border-primary)",
+          background: "var(--bg-secondary)",
         }}
       >
+        <label htmlFor="repomind-chat-input" style={{ position: "absolute", left: -10_000 }}>
+          Ask a question about this repository
+        </label>
         <input
+          id="repomind-chat-input"
           type="text"
           value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage(input)}
-          placeholder="Ask about this codebase..."
-          disabled={isLoading}
+          onChange={(event) => setInput(event.target.value)}
+          placeholder="Ask about this codebase"
+          disabled={isLoading || isRestoring}
+          autoComplete="off"
           style={{
             flex: 1,
+            minWidth: 0,
             padding: "var(--space-sm) var(--space-md)",
             border: "1px solid var(--border-primary)",
-            borderRadius: "var(--radius-md)",
-            background: "var(--bg-tertiary)",
+            borderRadius: "var(--radius-sm)",
+            background: "var(--bg-primary)",
             color: "var(--text-primary)",
             fontFamily: "var(--font-sans)",
-            fontSize: "0.85rem",
+            fontSize: "0.82rem",
             outline: "none",
           }}
         />
         <button
+          type="submit"
           className="btn btn--primary btn--sm"
-          onClick={() => sendMessage(input)}
-          disabled={isLoading || !input.trim()}
+          disabled={isLoading || isRestoring || !input.trim()}
+          aria-label="Send question"
+          title="Send question"
         >
-          Send
+          <Send size={15} aria-hidden="true" />
         </button>
-      </div>
-    </div>
+      </form>
+    </section>
   );
 }

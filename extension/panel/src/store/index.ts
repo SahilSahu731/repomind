@@ -1,87 +1,100 @@
 import { create } from "zustand";
 import type {
-  RepoInfo,
-  AnalysisResult,
   AnalysisProgress,
+  AnalysisResult,
   ChatMessage,
+  RepoInfo,
   UserInfo,
 } from "../../../shared/types";
+import { repoIdentityKey } from "../../../shared/github";
 
-type Tab = "overview" | "architecture" | "graph" | "guide" | "chat" | "files" | "compare";
+export type Tab =
+  | "overview"
+  | "architecture"
+  | "graph"
+  | "guide"
+  | "chat"
+  | "files"
+  | "compare";
 
 interface AppState {
-  /* ─── Current Repo ─── */
   currentRepo: RepoInfo | null;
-  setCurrentRepo: (repo: RepoInfo | null) => void;
-
-  /* ─── Analysis ─── */
   analysis: AnalysisResult | null;
-  setAnalysis: (analysis: AnalysisResult | null) => void;
-
   progress: AnalysisProgress | null;
-  setProgress: (progress: AnalysisProgress | null) => void;
-
   isAnalyzing: boolean;
-  setIsAnalyzing: (v: boolean) => void;
-
   error: string | null;
-  setError: (error: string | null) => void;
-
-  /* ─── UI ─── */
   activeTab: Tab;
-  setActiveTab: (tab: Tab) => void;
-
-  /* ─── Auth ─── */
   user: UserInfo | null;
   isLoggedIn: boolean;
-  setUser: (user: UserInfo | null) => void;
-  setIsLoggedIn: (v: boolean) => void;
-
-  /* ─── Chat ─── */
+  authPending: boolean;
   chatMessages: ChatMessage[];
-  addChatMessage: (msg: ChatMessage) => void;
+  setContext: (repo: RepoInfo | null, analysis?: AnalysisResult | null) => void;
+  setAnalysis: (analysis: AnalysisResult | null) => void;
+  setProgress: (progress: AnalysisProgress | null) => void;
+  setIsAnalyzing: (value: boolean) => void;
+  setError: (error: string | null) => void;
+  setActiveTab: (tab: Tab) => void;
+  setUser: (user: UserInfo | null) => void;
+  setIsLoggedIn: (value: boolean) => void;
+  setAuthPending: (value: boolean) => void;
+  addChatMessage: (message: ChatMessage) => void;
   clearChat: () => void;
-
-  /* ─── Actions ─── */
   reset: () => void;
 }
 
 export const useStore = create<AppState>((set) => ({
   currentRepo: null,
-  setCurrentRepo: (repo) => set({ currentRepo: repo }),
-
   analysis: null,
-  setAnalysis: (analysis) => set({ analysis, isAnalyzing: false, error: null }),
-
   progress: null,
-  setProgress: (progress) => set({ progress }),
-
   isAnalyzing: false,
-  setIsAnalyzing: (v) => set({ isAnalyzing: v }),
-
   error: null,
-  setError: (error) => set({ error, isAnalyzing: false }),
-
   activeTab: "overview",
-  setActiveTab: (tab) => set({ activeTab: tab }),
-
   user: null,
   isLoggedIn: false,
-  setUser: (user) => set({ user, isLoggedIn: !!user }),
-  setIsLoggedIn: (v) => set({ isLoggedIn: v }),
-
+  authPending: false,
   chatMessages: [],
-  addChatMessage: (msg) =>
-    set((state) => ({ chatMessages: [...state.chatMessages, msg] })),
-  clearChat: () => set({ chatMessages: [] }),
 
-  reset: () =>
-    set({
-      analysis: null,
-      progress: null,
-      isAnalyzing: false,
-      error: null,
-      activeTab: "overview",
-      chatMessages: [],
+  setContext: (repo, analysis = null) =>
+    set((state) => {
+      const previousKey = state.currentRepo ? repoIdentityKey(state.currentRepo) : null;
+      const nextKey = repo ? repoIdentityKey(repo) : null;
+      const changed = previousKey !== nextKey;
+
+      return {
+        currentRepo: repo,
+        analysis,
+        progress: changed ? null : state.progress,
+        isAnalyzing: changed ? false : state.isAnalyzing,
+        error: changed ? null : state.error,
+        activeTab: changed ? "overview" : state.activeTab,
+        chatMessages: changed ? [] : state.chatMessages,
+      };
     }),
+  setAnalysis: (analysis) => set({ analysis, isAnalyzing: false, error: null, progress: null }),
+  setProgress: (progress) => set({ progress, isAnalyzing: Boolean(progress), error: null }),
+  setIsAnalyzing: (isAnalyzing) => set({ isAnalyzing }),
+  setError: (error) => set({ error, isAnalyzing: false }),
+  setActiveTab: (activeTab) => set({ activeTab }),
+  setUser: (user) => set((state) => ({
+    user,
+    isLoggedIn: Boolean(user),
+    authPending: false,
+    error: user ? null : state.error,
+  })),
+  setIsLoggedIn: (isLoggedIn) => set((state) => ({
+    isLoggedIn,
+    user: isLoggedIn ? state.user : null,
+    authPending: false,
+  })),
+  setAuthPending: (authPending) => set({ authPending }),
+  addChatMessage: (message) => set((state) => ({ chatMessages: [...state.chatMessages, message] })),
+  clearChat: () => set({ chatMessages: [] }),
+  reset: () => set({
+    analysis: null,
+    progress: null,
+    isAnalyzing: false,
+    error: null,
+    activeTab: "overview",
+    chatMessages: [],
+  }),
 }));

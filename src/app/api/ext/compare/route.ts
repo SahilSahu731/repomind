@@ -1,8 +1,7 @@
 import type { NextRequest } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { corsOk, withCors } from "@/lib/cors";
-import { getAnalysisResultByRepoId, getRepoByGithubUrlAndBranch } from "@/lib/supabaseDb";
+import { corsOk, rejectDisallowedCorsOrigin, withCors } from "@/lib/cors";
+import { getExtensionPrincipal } from "@/lib/extensionAuth";
+import { getAnalysisResultByRepoId, listReposByUser } from "@/lib/supabaseDb";
 import { generateWithGemini, hasGeminiKey } from "@/lib/ai";
 
 export async function OPTIONS(req: NextRequest) {
@@ -11,10 +10,12 @@ export async function OPTIONS(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const origin = req.headers.get("origin");
+  const originRejection = rejectDisallowedCorsOrigin(origin);
+  if (originRejection) return originRejection;
 
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const principal = await getExtensionPrincipal(req);
+    if (!principal) {
       return withCors(
         { success: false, error: { code: "UNAUTHORIZED", message: "Authentication required" } },
         origin,
@@ -44,14 +45,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Find analyses for both repos
+    // Find the newest completed analyses regardless of which default branch
+    // each repository uses.
     const urlA = `https://github.com/${repoA.owner}/${repoA.repo}`;
     const urlB = `https://github.com/${repoB.owner}/${repoB.repo}`;
-
-    const [rowA, rowB] = await Promise.all([
-      getRepoByGithubUrlAndBranch(urlA, "HEAD", session.user.id),
-      getRepoByGithubUrlAndBranch(urlB, "HEAD", session.user.id),
-    ]);
+    const { repos } = await listReposByUser(principal.id, 1, 100, "COMPLETE");
+    const rowA = repos.find((row) => row.githubUrl === urlA && row.status === "COMPLETE");
+    const rowB = repos.find((row) => row.githubUrl === urlB && row.status === "COMPLETE");
 
     if (!rowA || !rowB) {
       return withCors(

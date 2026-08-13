@@ -1,117 +1,223 @@
+import {
+  Boxes,
+  FileCode2,
+  Layers,
+  PanelsTopLeft,
+  TriangleAlert,
+  Workflow,
+} from "lucide-react";
 import type { AnalysisResult } from "../../../shared/types";
 
 interface Props {
   analysis: AnalysisResult;
 }
 
+const eyebrowStyle = {
+  color: "var(--text-tertiary)",
+  fontFamily: "var(--font-mono)",
+  fontSize: "0.67rem",
+  fontWeight: 600,
+  letterSpacing: "0.14em",
+  textTransform: "uppercase" as const,
+};
+
+const sectionTitleStyle = {
+  fontFamily: "var(--font-serif, Georgia, serif)",
+  fontSize: "1.05rem",
+  fontWeight: 500,
+  letterSpacing: "-0.02em",
+};
+
 export function ArchitectureView({ analysis }: Props) {
   const { architecture } = analysis;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-lg)" }}>
-      {/* Pattern */}
-      <div className="card animate-slide-up">
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", marginBottom: "var(--space-md)" }}>
-          <span style={{ fontSize: "1.3rem" }}>🏗️</span>
-          <h3 style={{ fontSize: "0.95rem" }}>Architecture Pattern</h3>
-        </div>
-        <span
-          className="pill pill--accent"
-          style={{ fontSize: "0.9rem", padding: "6px 14px" }}
+      <section className="card" style={{ borderRadius: "var(--radius-sm)" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-sm)",
+            marginBottom: "var(--space-md)",
+          }}
         >
-          {architecture.pattern}
-        </span>
-      </div>
-
-      {/* Data Flow */}
-      <div className="card animate-slide-up" style={{ animationDelay: "0.1s" }}>
-        <h3 style={{ fontSize: "0.9rem", marginBottom: "var(--space-sm)" }}>🔄 Data Flow</h3>
-        <p style={{ fontSize: "0.85rem" }}>{architecture.dataFlow}</p>
-      </div>
-
-      {/* Layers */}
-      <div className="card animate-slide-up" style={{ animationDelay: "0.15s" }}>
-        <h3 style={{ fontSize: "0.9rem", marginBottom: "var(--space-md)" }}>📚 Layers</h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-xs)" }}>
-          {architecture.layers.map((layer, i) => (
-            <div
-              key={layer}
-              style={{
-                padding: "var(--space-sm) var(--space-md)",
-                background: `rgba(99, 102, 241, ${0.05 + i * 0.03})`,
-                borderRadius: "var(--radius-md)",
-                border: "1px solid var(--border-subtle)",
-                fontSize: "0.85rem",
-                fontWeight: 500,
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--space-sm)",
-              }}
-            >
-              <span style={{ opacity: 0.5, fontSize: "0.75rem" }}>L{i + 1}</span>
-              {layer}
-            </div>
-          ))}
+          <PanelsTopLeft size={17} aria-hidden="true" />
+          <span style={eyebrowStyle}>System shape</span>
         </div>
-      </div>
+        <h2 style={{ ...sectionTitleStyle, fontSize: "1.35rem" }}>
+          {architecture.pattern || "Architecture pattern not identified"}
+        </h2>
+      </section>
 
-      {/* Modules */}
-      <div className="card animate-slide-up" style={{ animationDelay: "0.2s" }}>
-        <h3 style={{ fontSize: "0.9rem", marginBottom: "var(--space-md)" }}>📦 Modules</h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
-          {architecture.modules.map((mod) => (
-            <div
-              key={mod.name}
-              style={{
-                padding: "var(--space-md)",
-                background: "var(--bg-tertiary)",
-                borderRadius: "var(--radius-md)",
-                border: "1px solid var(--border-subtle)",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-xs)" }}>
-                <span style={{ fontWeight: 600, fontSize: "0.85rem" }}>{mod.name}</span>
-                <code style={{ fontSize: "0.7rem" }}>{mod.path}</code>
-              </div>
-              <p style={{ fontSize: "0.8rem", marginBottom: "var(--space-sm)" }}>
-                {mod.responsibility}
-              </p>
-              <div style={{ display: "flex", gap: "var(--space-xs)", flexWrap: "wrap" }}>
-                {mod.keyFiles.slice(0, 4).map((f) => (
-                  <span key={f} className="pill" style={{ fontSize: "0.7rem" }}>
-                    {f}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
+      <section className="card" style={{ borderRadius: "var(--radius-sm)" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-sm)",
+            marginBottom: "var(--space-md)",
+          }}
+        >
+          <Workflow size={17} aria-hidden="true" />
+          <h3 style={sectionTitleStyle}>Data flow</h3>
         </div>
-      </div>
+        <p style={{ fontSize: "0.86rem", lineHeight: 1.75 }}>
+          {architecture.dataFlow || "No data-flow narrative was produced for this repository."}
+        </p>
+      </section>
 
-      {/* Issues */}
-      {architecture.issues.length > 0 && (
-        <div className="card animate-slide-up" style={{ animationDelay: "0.25s" }}>
-          <h3 style={{ fontSize: "0.9rem", marginBottom: "var(--space-md)" }}>⚠️ Potential Issues</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-sm)" }}>
-            {architecture.issues.map((issue, i) => (
-              <div
-                key={i}
+      <section className="card" style={{ borderRadius: "var(--radius-sm)" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-sm)",
+            marginBottom: "var(--space-md)",
+          }}
+        >
+          <Layers size={17} aria-hidden="true" />
+          <h3 style={sectionTitleStyle}>Architectural layers</h3>
+        </div>
+
+        {architecture.layers.length > 0 ? (
+          <ol style={{ display: "grid", gap: "var(--space-xs)", listStyle: "none" }}>
+            {architecture.layers.map((layer, index) => (
+              <li
+                key={`${layer}-${index}`}
                 style={{
-                  display: "flex",
+                  display: "grid",
+                  gridTemplateColumns: "28px minmax(0, 1fr)",
+                  alignItems: "center",
                   gap: "var(--space-sm)",
-                  fontSize: "0.8rem",
-                  color: "var(--warning)",
-                  padding: "var(--space-sm)",
-                  background: "rgba(210, 153, 34, 0.08)",
+                  minHeight: 40,
+                  padding: "var(--space-sm) var(--space-md)",
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-subtle)",
                   borderRadius: "var(--radius-sm)",
                 }}
               >
-                <span>⚠️</span>
-                <span>{issue}</span>
-              </div>
+                <span style={{ ...eyebrowStyle, color: "var(--accent-primary)" }}>
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <span style={{ fontSize: "0.85rem", fontWeight: 500 }}>{layer}</span>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p style={{ fontSize: "0.82rem" }}>No distinct architectural layers were detected.</p>
+        )}
+      </section>
+
+      <section className="card" style={{ borderRadius: "var(--radius-sm)" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-sm)",
+            marginBottom: "var(--space-md)",
+          }}
+        >
+          <Boxes size={17} aria-hidden="true" />
+          <h3 style={sectionTitleStyle}>Modules and responsibilities</h3>
+        </div>
+
+        {architecture.modules.length > 0 ? (
+          <div style={{ display: "grid", gap: "var(--space-sm)" }}>
+            {architecture.modules.map((module, index) => (
+              <article
+                key={`${module.path}-${module.name}-${index}`}
+                style={{
+                  padding: "var(--space-md)",
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "var(--radius-sm)",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    gap: "var(--space-sm)",
+                    marginBottom: "var(--space-xs)",
+                  }}
+                >
+                  <h4 style={{ fontFamily: "var(--font-serif, Georgia, serif)", fontWeight: 500 }}>
+                    {module.name}
+                  </h4>
+                  <code style={{ maxWidth: "55%", overflowWrap: "anywhere", textAlign: "right" }}>
+                    {module.path}
+                  </code>
+                </div>
+                <p style={{ fontSize: "0.8rem", lineHeight: 1.65 }}>{module.responsibility}</p>
+
+                {module.keyFiles.length > 0 && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "var(--space-xs)",
+                      flexWrap: "wrap",
+                      marginTop: "var(--space-sm)",
+                    }}
+                  >
+                    <FileCode2 size={13} color="var(--text-tertiary)" aria-hidden="true" />
+                    {module.keyFiles.slice(0, 5).map((file) => (
+                      <span key={file} className="pill" style={{ fontSize: "0.68rem" }}>
+                        {file}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </article>
             ))}
           </div>
-        </div>
+        ) : (
+          <p style={{ fontSize: "0.82rem" }}>No module boundaries were identified.</p>
+        )}
+      </section>
+
+      {architecture.issues.length > 0 && (
+        <section
+          className="card"
+          style={{ borderRadius: "var(--radius-sm)", borderColor: "var(--warning)" }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-sm)",
+              marginBottom: "var(--space-md)",
+            }}
+          >
+            <TriangleAlert size={17} color="var(--warning)" aria-hidden="true" />
+            <h3 style={sectionTitleStyle}>Points to verify</h3>
+          </div>
+          <ul style={{ display: "grid", gap: "var(--space-sm)", listStyle: "none" }}>
+            {architecture.issues.map((issue, index) => (
+              <li
+                key={`${issue}-${index}`}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "18px minmax(0, 1fr)",
+                  gap: "var(--space-sm)",
+                  alignItems: "start",
+                  padding: "var(--space-sm) 0",
+                  borderTop: index === 0 ? "none" : "1px solid var(--border-subtle)",
+                  color: "var(--text-secondary)",
+                  fontSize: "0.8rem",
+                  lineHeight: 1.6,
+                }}
+              >
+                <span style={{ ...eyebrowStyle, color: "var(--warning)" }}>
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <span>{issue}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </div>
   );

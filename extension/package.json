@@ -1,13 +1,16 @@
 {
   "name": "repomind-extension",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite build --watch --mode development",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "build": "tsc --noEmit && vite build && node scripts/verify-build.mjs",
+    "build:dev": "tsc --noEmit && vite build --mode development && node scripts/verify-build.mjs dist-dev",
+    "package": "npm run build && cd dist && zip -qrFS ../repomind-extension.zip .",
+    "test": "node --experimental-strip-types shared/github.test.ts",
+    "typecheck": "tsc --noEmit",
+    "verify": "npm run typecheck && npm run test && node scripts/verify-build.mjs"
   },
   "dependencies": {
     "d3": "^7.9.0",

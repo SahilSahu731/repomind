@@ -6,6 +6,17 @@
 import type { RepoInfo, AnalysisProgress, AnalysisResult, UserInfo } from "../shared/types";
 import { API_BASE_URL } from "../shared/types";
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code: string
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 class ApiClient {
   private baseUrl = API_BASE_URL;
 
@@ -23,15 +34,32 @@ class ApiClient {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const res = await fetch(`${this.baseUrl}${path}`, {
-      ...fetchOptions,
-      headers,
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30_000);
+    let res: Response;
+
+    try {
+      res = await fetch(`${this.baseUrl}${path}`, {
+        ...fetchOptions,
+        credentials: "omit",
+        headers,
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new ApiError("RepoMind took too long to respond", 408, "TIMEOUT");
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(
-        body?.error?.message || `API error: ${res.status} ${res.statusText}`
+      throw new ApiError(
+        body?.error?.message || `API error: ${res.status} ${res.statusText}`,
+        res.status,
+        body?.error?.code || "API_ERROR"
       );
     }
 
@@ -86,16 +114,12 @@ class ApiClient {
   async getResults(
     repoId: string,
     token: string | null
-  ): Promise<AnalysisResult | null> {
-    try {
-      const data = await this.fetch<{
-        success: boolean;
-        data: AnalysisResult;
-      }>(`/api/ext/results/${repoId}`, { token });
-      return data.data;
-    } catch {
-      return null;
-    }
+  ): Promise<AnalysisResult> {
+    const data = await this.fetch<{
+      success: boolean;
+      data: AnalysisResult;
+    }>(`/api/ext/results/${repoId}`, { token });
+    return data.data;
   }
 
   /* ─── Chat ─── */

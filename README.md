@@ -8,6 +8,12 @@ RepoMind analyzes public GitHub repositories and turns their structure, dependen
 2. Copy `.env.example` to `.env.local` and replace the development values you need.
 3. Run the web application with `npm run dev`.
 
+## Browser extension
+
+RepoMind includes a Manifest V3 Chrome extension in `extension/`. Build a production package with `npm run extension:build`, or run `npm run extension:dev` alongside the local website for watch-mode development. Load `extension/dist` for production or `extension/dist-dev` for localhost testing from Chrome's **Load unpacked** screen.
+
+The extension uses a short-lived encrypted bearer token issued after website sign-in. Set a dedicated `EXTENSION_TOKEN_SECRET` and add the exact published extension origin to `EXTENSION_ALLOWED_ORIGINS` before deploying. See `extension/README.md` for the complete build, load, and smoke-test workflow.
+
 When Supabase is intentionally left at the example URL outside production, account and workspace data use the ignored `.repomind/` development store and analysis runs inline. Production fails closed instead of using that fallback.
 
 ## Production architecture
@@ -38,6 +44,7 @@ Upstash is also optional for the first release. Without it, RepoMind applies a b
 npm run lint
 npm run typecheck
 npm run build
+npm run extension:verify
 npm audit --omit=dev
 ```
 

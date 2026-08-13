@@ -1,7 +1,6 @@
 import type { NextRequest } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { corsOk, withCors } from "@/lib/cors";
+import { corsOk, rejectDisallowedCorsOrigin, withCors } from "@/lib/cors";
+import { getExtensionPrincipal } from "@/lib/extensionAuth";
 import { getAnalysisResultByRepoId, getRepoById } from "@/lib/supabaseDb";
 
 export async function OPTIONS(req: NextRequest) {
@@ -13,10 +12,12 @@ export async function GET(
   { params }: { params: Promise<{ repoId: string }> }
 ) {
   const origin = req.headers.get("origin");
+  const originRejection = rejectDisallowedCorsOrigin(origin);
+  if (originRejection) return originRejection;
 
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const principal = await getExtensionPrincipal(req);
+    if (!principal) {
       return withCors(
         { success: false, error: { code: "UNAUTHORIZED", message: "Authentication required" } },
         origin,
@@ -35,7 +36,7 @@ export async function GET(
     }
 
     const repo = await getRepoById(repoId);
-    if (!repo || repo.userId !== session.user.id) {
+    if (!repo || repo.userId !== principal.id) {
       return withCors(
         { success: false, error: { code: "NOT_FOUND", message: "Analysis results not found" } },
         origin,
@@ -67,6 +68,7 @@ export async function GET(
           startGuide: result.startGuide,
           fileSummaries: result.fileSummaries,
           fileTree: result.fileTree,
+          contributionScore: result.contributionScore,
         },
       },
       origin

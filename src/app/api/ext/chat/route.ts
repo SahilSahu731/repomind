@@ -1,8 +1,7 @@
 import type { NextRequest } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { corsOk, withCors } from "@/lib/cors";
-import { getAnalysisResultByRepoId } from "@/lib/supabaseDb";
+import { corsOk, rejectDisallowedCorsOrigin, withCors } from "@/lib/cors";
+import { getExtensionPrincipal } from "@/lib/extensionAuth";
+import { getAnalysisResultByRepoId, getRepoById } from "@/lib/supabaseDb";
 import { generateWithGemini, hasGeminiKey } from "@/lib/ai";
 
 export async function OPTIONS(req: NextRequest) {
@@ -11,10 +10,12 @@ export async function OPTIONS(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const origin = req.headers.get("origin");
+  const originRejection = rejectDisallowedCorsOrigin(origin);
+  if (originRejection) return originRejection;
 
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const principal = await getExtensionPrincipal(req);
+    if (!principal) {
       return withCors(
         { success: false, error: { code: "UNAUTHORIZED", message: "Authentication required" } },
         origin,
@@ -42,6 +43,15 @@ export async function POST(req: NextRequest) {
         { success: false, error: { code: "INVALID_INPUT", message: "Missing repoId or message" } },
         origin,
         400
+      );
+    }
+
+    const repo = await getRepoById(repoId);
+    if (!repo || repo.userId !== principal.id) {
+      return withCors(
+        { success: false, error: { code: "NOT_FOUND", message: "No analysis found for this repo" } },
+        origin,
+        404
       );
     }
 

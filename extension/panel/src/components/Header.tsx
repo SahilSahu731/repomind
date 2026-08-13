@@ -1,53 +1,80 @@
+import { ExternalLink, LogIn, LogOut } from "lucide-react";
+import { API_BASE_URL } from "../../../shared/types";
 import { useStore } from "../store";
+import { BrandMark } from "./BrandMark";
 
 export function Header() {
   const { currentRepo, isLoggedIn, user } = useStore();
+  const initial = (user?.name || user?.email || "R").charAt(0).toUpperCase();
 
   return (
-    <header
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "var(--space-md) var(--space-lg)",
-        borderBottom: "1px solid var(--border-primary)",
-        background: "var(--bg-secondary)",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
-        <span style={{ fontSize: "1.2rem" }}>🧠</span>
-        <span style={{ fontWeight: 700, fontSize: "0.95rem", background: "var(--accent-gradient)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-          RepoMind
-        </span>
-        {currentRepo && (
-          <span style={{ color: "var(--text-tertiary)", fontSize: "0.75rem", marginLeft: "var(--space-xs)" }}>
-            {currentRepo.owner}/{currentRepo.repo}
-          </span>
-        )}
-      </div>
+    <header className="app-header">
+      <div className="header-primary">
+        <a
+          className="brand"
+          href={API_BASE_URL}
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Open RepoMind website"
+        >
+          <BrandMark className="brand-mark" />
+          <span>RepoMind</span>
+        </a>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)" }}>
         {isLoggedIn && user ? (
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-xs)" }}>
-            {/* This component runs in a Vite-built extension, where next/image is unavailable. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={user.image}
-              alt={user.name}
-              style={{ width: 22, height: 22, borderRadius: "50%" }}
-            />
-            <span className="pill pill--accent" style={{ fontSize: "0.7rem" }}>
-              {user.plan}
+          <div className="account-summary" title={user.email}>
+            {user.image ? (
+              // This is a Vite-built extension, so next/image is unavailable.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={user.image} alt="" className="account-avatar" />
+            ) : (
+              <span className="account-avatar account-initial">{initial}</span>
+            )}
+            <span className="account-copy">
+              <strong>{user.name || "Account"}</strong>
+              <small>{user.creditsRemaining} credits</small>
             </span>
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="Disconnect RepoMind account"
+              onClick={() => chrome.runtime.sendMessage({ type: "LOGOUT", payload: null })}
+            >
+              <LogOut size={15} />
+            </button>
           </div>
         ) : (
           <button
-            className="btn btn--ghost btn--sm"
+            type="button"
+            className="button button-quiet button-small"
             onClick={() => chrome.runtime.sendMessage({ type: "LOGIN", payload: null })}
           >
+            <LogIn size={14} />
             Sign in
           </button>
         )}
+      </div>
+
+      <div className="header-context">
+        <span className={`status-dot ${currentRepo ? "status-dot-ready" : ""}`} />
+        <div className="repo-breadcrumb">
+          <span>{currentRepo ? "Repository detected" : "Waiting for GitHub"}</span>
+          <strong>
+            {currentRepo ? `${currentRepo.owner}/${currentRepo.repo}` : "Open a public repository"}
+          </strong>
+        </div>
+        {currentRepo ? (
+          <a
+            className="header-repo-link"
+            href={currentRepo.url}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Open repository on GitHub"
+          >
+            <span>{currentRepo.branch}</span>
+            <ExternalLink size={12} />
+          </a>
+        ) : null}
       </div>
     </header>
   );

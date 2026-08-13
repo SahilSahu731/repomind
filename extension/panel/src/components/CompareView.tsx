@@ -1,4 +1,23 @@
 import { useState } from "react";
+import {
+  ArrowRight,
+  Check,
+  GitCompareArrows,
+  LoaderCircle,
+  Minus,
+  Scale,
+} from "lucide-react";
+
+interface RepoReference {
+  owner: string;
+  repo: string;
+}
+
+interface ComparisonScores {
+  codeQuality: number;
+  documentation: number;
+  maintainability: number;
+}
 
 interface ComparisonResult {
   summary: string;
@@ -6,15 +25,142 @@ interface ComparisonResult {
   differences: string[];
   recommendation: string;
   scores: {
-    repoA: { codeQuality: number; documentation: number; maintainability: number };
-    repoB: { codeQuality: number; documentation: number; maintainability: number };
+    repoA: ComparisonScores;
+    repoB: ComparisonScores;
   };
 }
 
 interface CompareData {
-  repoA: { owner: string; repo: string };
-  repoB: { owner: string; repo: string };
+  repoA: RepoReference;
+  repoB: RepoReference;
   comparison: ComparisonResult;
+}
+
+interface CachedRepoResponse {
+  repo?: RepoReference | null;
+}
+
+interface CompareMessageResponse {
+  ok?: boolean;
+  data?: unknown;
+  result?: unknown;
+  response?: unknown;
+  error?: string;
+}
+
+const sectionTitleStyle = {
+  fontFamily: "var(--font-serif, Georgia, serif)",
+  fontSize: "1.05rem",
+  fontWeight: 500,
+  letterSpacing: "-0.02em",
+};
+
+function isRepoReference(value: unknown): value is RepoReference {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<RepoReference>;
+  return typeof candidate.owner === "string" && typeof candidate.repo === "string";
+}
+
+function isScores(value: unknown): value is ComparisonScores {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<ComparisonScores>;
+  return (
+    typeof candidate.codeQuality === "number" &&
+    typeof candidate.documentation === "number" &&
+    typeof candidate.maintainability === "number"
+  );
+}
+
+function parseCompareData(value: unknown): CompareData | null {
+  let candidate = value;
+
+  if (typeof candidate === "string") {
+    try {
+      candidate = JSON.parse(candidate) as unknown;
+    } catch {
+      return null;
+    }
+  }
+
+  if (!candidate || typeof candidate !== "object") return null;
+
+  const data = candidate as Partial<CompareData>;
+  const comparison = data.comparison;
+  if (!comparison || typeof comparison !== "object") return null;
+
+  const scores = comparison.scores;
+  if (!scores || typeof scores !== "object") return null;
+
+  return isRepoReference(data.repoA) &&
+    isRepoReference(data.repoB) &&
+    typeof comparison.summary === "string" &&
+    Array.isArray(comparison.similarities) &&
+    comparison.similarities.every((item) => typeof item === "string") &&
+    Array.isArray(comparison.differences) &&
+    comparison.differences.every((item) => typeof item === "string") &&
+    typeof comparison.recommendation === "string" &&
+    isScores(scores.repoA) &&
+    isScores(scores.repoB)
+    ? (data as CompareData)
+    : null;
+}
+
+function parseRepoUrl(value: string): RepoReference | null {
+  const normalized = /^https?:\/\//i.test(value.trim())
+    ? value.trim()
+    : `https://${value.trim()}`;
+
+  try {
+    const url = new URL(normalized);
+    if (url.protocol !== "https:" || !["github.com", "www.github.com"].includes(url.hostname)) {
+      return null;
+    }
+
+    const [owner, rawRepo] = url.pathname.split("/").filter(Boolean);
+    const repo = rawRepo?.replace(/\.git$/i, "");
+    const isValidPart = (part: string) => /^[A-Za-z0-9._-]+$/.test(part);
+
+    if (!owner || !repo || !isValidPart(owner) || !isValidPart(repo)) return null;
+    return { owner, repo };
+  } catch {
+    return null;
+  }
+}
+
+function ScoreBar({ label, value }: { label: string; value: number }) {
+  const boundedValue = Math.max(0, Math.min(10, value));
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "92px minmax(0, 1fr) 24px", alignItems: "center", gap: "var(--space-sm)", fontSize: "0.76rem" }}>
+      <span style={{ color: "var(--text-secondary)" }}>{label}</span>
+      <div
+        role="progressbar"
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={10}
+        aria-valuenow={boundedValue}
+        style={{
+          height: 5,
+          background: "var(--bg-tertiary)",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "var(--radius-full)",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            width: `${boundedValue * 10}%`,
+            height: "100%",
+            background: "var(--accent-primary)",
+            transition: "width 0.4s var(--ease-out)",
+          }}
+        />
+      </div>
+      <span style={{ textAlign: "right", fontFamily: "var(--font-mono)", fontWeight: 600 }}>
+        {boundedValue}
+      </span>
+    </div>
+  );
 }
 
 export function CompareView() {
@@ -23,16 +169,10 @@ export function CompareView() {
   const [result, setResult] = useState<CompareData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const parseRepoUrl = (url: string): { owner: string; repo: string } | null => {
-    const match = url.match(/github\.com\/([^/]+)\/([^/\s]+)/);
-    if (!match) return null;
-    return { owner: match[1], repo: match[2].replace(/\.git$/, "") };
-  };
-
   const handleCompare = async () => {
-    const parsed = parseRepoUrl(repoUrl);
-    if (!parsed) {
-      setError("Enter a valid GitHub URL (e.g. https://github.com/owner/repo)");
+    const repoB = parseRepoUrl(repoUrl);
+    if (!repoB) {
+      setError("Enter a public GitHub repository URL, such as https://github.com/owner/repo.");
       return;
     }
 
@@ -40,185 +180,290 @@ export function CompareView() {
     setError(null);
 
     try {
-      // Get current repo from the store
-      const response = await new Promise<CompareData>((resolve, reject) => {
+      const repoA = await new Promise<RepoReference>((resolve, reject) => {
         chrome.runtime.sendMessage(
           { type: "GET_CACHED_ANALYSIS", payload: null },
-          (cached) => {
-            if (!cached?.repo) {
-              reject(new Error("No current repo detected"));
+          (cached: CachedRepoResponse | undefined) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
               return;
             }
 
-            // Call compare via background
-            chrome.runtime.sendMessage(
-              {
-                type: "CHAT_MESSAGE", // Reusing chat channel for simplicity
-                payload: {
-                  repoId: "__compare__",
-                  message: JSON.stringify({
-                    repoA: { owner: cached.repo.owner, repo: cached.repo.repo },
-                    repoB: parsed,
-                  }),
-                  history: [],
-                },
-              },
-              (res) => {
-                if (res?.ok) resolve(JSON.parse(res.response));
-                else reject(new Error(res?.error ?? "Compare failed"));
-              }
-            );
+            if (!isRepoReference(cached?.repo)) {
+              reject(new Error("No current repository was detected."));
+              return;
+            }
+
+            resolve(cached.repo);
           }
         );
       });
 
-      setResult(response);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Comparison failed");
+      if (
+        repoA.owner.toLowerCase() === repoB.owner.toLowerCase() &&
+        repoA.repo.toLowerCase() === repoB.repo.toLowerCase()
+      ) {
+        throw new Error("Choose a different repository to compare.");
+      }
+
+      const comparison = await new Promise<CompareData>((resolve, reject) => {
+        chrome.runtime.sendMessage(
+          {
+            type: "COMPARE_REPOS",
+            payload: { repoA, repoB },
+          },
+          (response: CompareMessageResponse | undefined) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+              return;
+            }
+
+            const parsed = parseCompareData(
+              response?.data ?? response?.result ?? response?.response
+            );
+
+            if (response?.ok && parsed) {
+              resolve(parsed);
+              return;
+            }
+
+            reject(new Error(response?.error ?? "The comparison could not be completed."));
+          }
+        );
+      });
+
+      setResult(comparison);
+    } catch (comparisonError) {
+      setResult(null);
+      setError(
+        comparisonError instanceof Error
+          ? comparisonError.message
+          : "The comparison could not be completed."
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const ScoreBar = ({ label, value, max = 10 }: { label: string; value: number; max?: number }) => (
-    <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", fontSize: "0.8rem" }}>
-      <span style={{ width: 100, color: "var(--text-secondary)" }}>{label}</span>
-      <div style={{ flex: 1, height: 6, background: "var(--bg-tertiary)", borderRadius: "var(--radius-full)" }}>
-        <div
-          style={{
-            width: `${(value / max) * 100}%`,
-            height: "100%",
-            background: "var(--accent-gradient)",
-            borderRadius: "var(--radius-full)",
-            transition: "width 0.5s var(--ease-out)",
-          }}
-        />
-      </div>
-      <span style={{ width: 24, textAlign: "right", fontWeight: 600, color: "var(--text-primary)" }}>
-        {value}
-      </span>
-    </div>
-  );
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-lg)" }}>
-      {/* Input */}
-      <div className="card">
-        <h3 style={{ fontSize: "0.9rem", marginBottom: "var(--space-md)" }}>🔀 Compare with another repo</h3>
-        <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "var(--space-md)" }}>
-          Enter a GitHub URL to compare with the current repository.
+      <section className="card" style={{ borderRadius: "var(--radius-sm)" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-sm)",
+            marginBottom: "var(--space-sm)",
+          }}
+        >
+          <GitCompareArrows size={18} aria-hidden="true" />
+          <h2 style={sectionTitleStyle}>Compare repositories</h2>
+        </div>
+        <p style={{ fontSize: "0.8rem", lineHeight: 1.6 }}>
+          Compare the current analysis with another repository already analyzed in your workspace.
         </p>
-        <div style={{ display: "flex", gap: "var(--space-sm)" }}>
+
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleCompare();
+          }}
+          style={{ display: "flex", gap: "var(--space-sm)", marginTop: "var(--space-md)" }}
+        >
+          <label htmlFor="compare-repository-url" style={{ position: "absolute", left: -10_000 }}>
+            GitHub repository URL
+          </label>
           <input
+            id="compare-repository-url"
             type="text"
+            inputMode="url"
             value={repoUrl}
-            onChange={(e) => setRepoUrl(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleCompare()}
-            placeholder="https://github.com/owner/repo"
+            onChange={(event) => setRepoUrl(event.target.value)}
+            placeholder="github.com/owner/repo"
             disabled={isLoading}
             style={{
               flex: 1,
+              minWidth: 0,
               padding: "var(--space-sm) var(--space-md)",
               border: "1px solid var(--border-primary)",
-              borderRadius: "var(--radius-md)",
-              background: "var(--bg-tertiary)",
+              borderRadius: "var(--radius-sm)",
+              background: "var(--bg-primary)",
               color: "var(--text-primary)",
               fontFamily: "var(--font-sans)",
-              fontSize: "0.85rem",
+              fontSize: "0.8rem",
               outline: "none",
             }}
           />
           <button
+            type="submit"
             className="btn btn--primary btn--sm"
-            onClick={handleCompare}
             disabled={isLoading || !repoUrl.trim()}
           >
-            {isLoading ? "Comparing..." : "Compare"}
+            {isLoading ? (
+              <LoaderCircle className="animate-spin" size={15} aria-hidden="true" />
+            ) : (
+              <ArrowRight size={15} aria-hidden="true" />
+            )}
+            <span>{isLoading ? "Comparing" : "Compare"}</span>
           </button>
-        </div>
+        </form>
+
         {error && (
-          <p style={{ fontSize: "0.8rem", color: "var(--danger)", marginTop: "var(--space-sm)" }}>
+          <p
+            role="alert"
+            style={{
+              marginTop: "var(--space-sm)",
+              paddingTop: "var(--space-sm)",
+              borderTop: "1px solid var(--border-subtle)",
+              color: "var(--danger)",
+              fontSize: "0.76rem",
+            }}
+          >
             {error}
           </p>
         )}
-      </div>
+      </section>
 
-      {/* Results */}
-      {result && (
+      {result ? (
         <>
-          {/* Summary */}
-          <div className="card animate-slide-up">
-            <h3 style={{ fontSize: "0.9rem", marginBottom: "var(--space-sm)" }}>📊 Comparison Summary</h3>
-            <p style={{ fontSize: "0.85rem" }}>{result.comparison.summary}</p>
-          </div>
+          <section className="card" style={{ borderRadius: "var(--radius-sm)" }}>
+            <p
+              style={{
+                color: "var(--text-tertiary)",
+                fontFamily: "var(--font-mono)",
+                fontSize: "0.65rem",
+                fontWeight: 600,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+              }}
+            >
+              Comparative reading
+            </p>
+            <h2 style={{ ...sectionTitleStyle, marginTop: "var(--space-xs)" }}>
+              {result.repoA.owner}/{result.repoA.repo} and {result.repoB.owner}/{result.repoB.repo}
+            </h2>
+            <p style={{ marginTop: "var(--space-md)", fontSize: "0.84rem", lineHeight: 1.7 }}>
+              {result.comparison.summary}
+            </p>
+          </section>
 
-          {/* Scores */}
-          <div className="card animate-slide-up" style={{ animationDelay: "0.1s" }}>
-            <h3 style={{ fontSize: "0.9rem", marginBottom: "var(--space-md)" }}>📈 Scores</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-lg)" }}>
-              <div>
-                <h4 style={{ fontSize: "0.8rem", color: "var(--accent-primary)", marginBottom: "var(--space-sm)" }}>
-                  {result.repoA.owner}/{result.repoA.repo}
-                </h4>
-                <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-xs)" }}>
-                  <ScoreBar label="Code Quality" value={result.comparison.scores.repoA.codeQuality} />
-                  <ScoreBar label="Docs" value={result.comparison.scores.repoA.documentation} />
-                  <ScoreBar label="Maintainability" value={result.comparison.scores.repoA.maintainability} />
-                </div>
-              </div>
-              <div>
-                <h4 style={{ fontSize: "0.8rem", color: "var(--success)", marginBottom: "var(--space-sm)" }}>
-                  {result.repoB.owner}/{result.repoB.repo}
-                </h4>
-                <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-xs)" }}>
-                  <ScoreBar label="Code Quality" value={result.comparison.scores.repoB.codeQuality} />
-                  <ScoreBar label="Docs" value={result.comparison.scores.repoB.documentation} />
-                  <ScoreBar label="Maintainability" value={result.comparison.scores.repoB.maintainability} />
-                </div>
-              </div>
+          <section className="card" style={{ borderRadius: "var(--radius-sm)" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-sm)",
+                marginBottom: "var(--space-md)",
+              }}
+            >
+              <Scale size={17} aria-hidden="true" />
+              <h3 style={sectionTitleStyle}>Signal comparison</h3>
             </div>
-          </div>
-
-          {/* Similarities */}
-          <div className="card animate-slide-up" style={{ animationDelay: "0.15s" }}>
-            <h3 style={{ fontSize: "0.9rem", marginBottom: "var(--space-md)" }}>🤝 Similarities</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-xs)" }}>
-              {result.comparison.similarities.map((s, i) => (
-                <div key={i} style={{ display: "flex", gap: "var(--space-sm)", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                  <span>•</span><span>{s}</span>
-                </div>
+            <div style={{ display: "grid", gap: "var(--space-md)" }}>
+              {([
+                [result.repoA, result.comparison.scores.repoA],
+                [result.repoB, result.comparison.scores.repoB],
+              ] as const).map(([repo, scores]) => (
+                <article
+                  key={`${repo.owner}/${repo.repo}`}
+                  style={{
+                    padding: "var(--space-md)",
+                    border: "1px solid var(--border-subtle)",
+                    borderRadius: "var(--radius-sm)",
+                    background: "var(--bg-tertiary)",
+                  }}
+                >
+                  <h4
+                    style={{
+                      marginBottom: "var(--space-sm)",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "0.72rem",
+                      overflowWrap: "anywhere",
+                    }}
+                  >
+                    {repo.owner}/{repo.repo}
+                  </h4>
+                  <div style={{ display: "grid", gap: "var(--space-xs)" }}>
+                    <ScoreBar label="Code quality" value={scores.codeQuality} />
+                    <ScoreBar label="Documentation" value={scores.documentation} />
+                    <ScoreBar label="Maintainability" value={scores.maintainability} />
+                  </div>
+                </article>
               ))}
             </div>
-          </div>
+          </section>
 
-          {/* Differences */}
-          <div className="card animate-slide-up" style={{ animationDelay: "0.2s" }}>
-            <h3 style={{ fontSize: "0.9rem", marginBottom: "var(--space-md)" }}>⚡ Differences</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-xs)" }}>
-              {result.comparison.differences.map((d, i) => (
-                <div key={i} style={{ display: "flex", gap: "var(--space-sm)", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                  <span>•</span><span>{d}</span>
-                </div>
+          <section className="card" style={{ borderRadius: "var(--radius-sm)" }}>
+            <h3 style={{ ...sectionTitleStyle, marginBottom: "var(--space-md)" }}>Shared ground</h3>
+            <ul style={{ display: "grid", gap: "var(--space-sm)", listStyle: "none" }}>
+              {result.comparison.similarities.map((similarity, index) => (
+                <li
+                  key={`${similarity}-${index}`}
+                  style={{ display: "grid", gridTemplateColumns: "18px minmax(0, 1fr)", gap: "var(--space-sm)", color: "var(--text-secondary)", fontSize: "0.8rem", lineHeight: 1.6 }}
+                >
+                  <Check size={15} color="var(--success)" aria-hidden="true" />
+                  <span>{similarity}</span>
+                </li>
               ))}
-            </div>
-          </div>
+            </ul>
+          </section>
 
-          {/* Recommendation */}
-          <div className="card animate-slide-up" style={{ animationDelay: "0.25s", border: "1px solid var(--border-accent)" }}>
-            <h3 style={{ fontSize: "0.9rem", marginBottom: "var(--space-sm)" }}>💡 Recommendation</h3>
-            <p style={{ fontSize: "0.85rem" }}>{result.comparison.recommendation}</p>
-          </div>
+          <section className="card" style={{ borderRadius: "var(--radius-sm)" }}>
+            <h3 style={{ ...sectionTitleStyle, marginBottom: "var(--space-md)" }}>Meaningful differences</h3>
+            <ul style={{ display: "grid", gap: "var(--space-sm)", listStyle: "none" }}>
+              {result.comparison.differences.map((difference, index) => (
+                <li
+                  key={`${difference}-${index}`}
+                  style={{ display: "grid", gridTemplateColumns: "18px minmax(0, 1fr)", gap: "var(--space-sm)", color: "var(--text-secondary)", fontSize: "0.8rem", lineHeight: 1.6 }}
+                >
+                  <Minus size={15} color="var(--accent-primary)" aria-hidden="true" />
+                  <span>{difference}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section
+            className="card"
+            style={{ borderRadius: "var(--radius-sm)", borderColor: "var(--accent-primary)" }}
+          >
+            <p
+              style={{
+                color: "var(--accent-primary)",
+                fontFamily: "var(--font-mono)",
+                fontSize: "0.65rem",
+                fontWeight: 600,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+              }}
+            >
+              Practical guidance
+            </p>
+            <p style={{ marginTop: "var(--space-sm)", fontSize: "0.84rem", lineHeight: 1.7 }}>
+              {result.comparison.recommendation}
+            </p>
+          </section>
         </>
-      )}
-
-      {/* Empty state */}
-      {!result && !isLoading && (
-        <div style={{ textAlign: "center", padding: "var(--space-xl)", color: "var(--text-tertiary)" }}>
-          <div style={{ fontSize: "2.5rem", marginBottom: "var(--space-md)" }}>🔀</div>
-          <p style={{ fontSize: "0.85rem" }}>
-            Enter a repo URL above to see a side-by-side AI comparison
-          </p>
-        </div>
+      ) : (
+        !isLoading && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "var(--space-sm)",
+              padding: "var(--space-2xl) var(--space-lg)",
+              border: "1px dashed var(--border-primary)",
+              borderRadius: "var(--radius-sm)",
+              textAlign: "center",
+            }}
+          >
+            <GitCompareArrows size={25} color="var(--text-tertiary)" aria-hidden="true" />
+            <p style={{ maxWidth: 260, fontSize: "0.8rem" }}>
+              Add a repository URL above to create a side-by-side reading.
+            </p>
+          </div>
+        )
       )}
     </div>
   );

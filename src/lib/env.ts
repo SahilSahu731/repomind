@@ -5,6 +5,7 @@ const envSchema = z.object({
   GITHUB_CLIENT_ID: z.string().min(1),
   GITHUB_CLIENT_SECRET: z.string().min(1),
   NEXTAUTH_SECRET: z.string().min(1),
+  EXTENSION_TOKEN_SECRET: z.string().min(32).optional(),
   NEXTAUTH_URL: z.string().url(),
   NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
   EXTENSION_ALLOWED_ORIGINS: z.string().optional(),
