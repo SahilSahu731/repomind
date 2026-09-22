@@ -69,6 +69,15 @@ function statusContent(item: AccountActivityItem) {
       tone: "text-[#82331f] border-[#a33f2b] bg-[#ead8cf]",
     };
   }
+  if (item.status === "CANCELLED") {
+    return {
+      eyebrow: "Cancelled",
+      title: `Analysis cancelled for ${item.owner}/${item.name}`,
+      description: "The run was cancelled before a complete repository report was produced.",
+      icon: AlertTriangle,
+      tone: "text-[#5e5952] border-[#8a8378] bg-[#e4ddd1]",
+    };
+  }
 
   const step = (item.currentStep ?? item.status).toLowerCase().replaceAll("_", " ");
   return {
@@ -213,11 +222,11 @@ export default function UserActivityPage() {
                       <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[8px] uppercase tracking-[.1em] text-[#6d675f]">
                         <span className="flex items-center gap-1.5"><Github className="h-3 w-3" />{item.owner}/{item.name}</span>
                         <span className="flex items-center gap-1.5"><GitBranch className="h-3 w-3" />{item.branch === "HEAD" ? "Default branch" : item.branch}</span>
-                        {item.status !== "COMPLETE" && item.status !== "FAILED" ? <span>{item.progress}% complete</span> : null}
+                        {!["COMPLETE", "FAILED", "CANCELLED"].includes(item.status) ? <span>{item.progress}% complete</span> : null}
                       </div>
 
                       <Link href={href} className="group mt-4 inline-flex items-center gap-2 text-xs font-semibold underline decoration-[#d75c3f] underline-offset-4">
-                        {item.status === "COMPLETE" ? "Open report" : item.status === "FAILED" ? "Review run" : "View progress"}
+                        {item.status === "COMPLETE" ? "Open report" : ["FAILED", "CANCELLED"].includes(item.status) ? "Review run" : "View progress"}
                         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                       </Link>
                     </div>

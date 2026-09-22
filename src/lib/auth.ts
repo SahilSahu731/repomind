@@ -1,122 +1,270 @@
-import type { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import GitHubProvider from "next-auth/providers/github";
-import { env } from "@/lib/env";
-import { supabaseSignInWithPassword } from "@/lib/supabaseAuth";
+import type {
+  NextAuthOptions,
+} from "next-auth";
 
-if (!env.GITHUB_CLIENT_ID || !env.GITHUB_CLIENT_SECRET) {
-  throw new Error("GitHub OAuth credentials (GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET) are required");
-}
+import GitHubProvider
+  from "next-auth/providers/github";
 
-export const authOptions: NextAuthOptions = {
-  secret: env.NEXTAUTH_SECRET,
+import {
+  env,
+} from "@/lib/env";
+
+import {
+  saveGitHubUserCredentials,
+  upsertGitHubUserIdentity,
+} from "@/lib/github/db";
+
+import {
+  isGitHubAuthProfile,
+} from "@/types/auth";
+
+export const authOptions:
+  NextAuthOptions = {
+  secret:
+    env.NEXTAUTH_SECRET,
+
   providers: [
-    CredentialsProvider({
-      name: "Email and Password",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        const email = credentials?.email?.trim().toLowerCase();
-        const password = credentials?.password;
-
-        if (!email || !password) {
-          return null;
-        }
-
-        const result = await supabaseSignInWithPassword(email, password);
-
-        if (!result.user?.id) {
-          return null;
-        }
-
-        return {
-          id: result.user.id,
-          name:
-            result.user.user_metadata?.name ??
-            result.user.user_metadata?.full_name ??
-            null,
-          email: result.user.email ?? email,
-          image: result.user.user_metadata?.avatar_url ?? null,
-        };
-      },
-    }),
     GitHubProvider({
-      clientId: env.GITHUB_CLIENT_ID,
-      clientSecret: env.GITHUB_CLIENT_SECRET,
-      allowDangerousEmailAccountLinking: true,
-      profile(profile) {
-        const normalizedEmail =
-          profile.email ?? `${profile.login}@users.noreply.github.com`;
+      clientId:
+        env.GITHUB_CLIENT_ID,
 
+      clientSecret:
+        env.GITHUB_CLIENT_SECRET,
+
+      profile(profile) {
         return {
-          id: profile.id.toString(),
-          name: profile.name || profile.login,
-          email: normalizedEmail,
-          image: profile.avatar_url,
-          githubId: profile.id.toString(),
-          githubUsername: profile.login,
+          /*
+           * Temporary provider identity.
+           *
+           * The jwt callback below replaces this with
+           * RepoMind's own immutable UUID.
+           */
+          id:
+            String(
+              profile.id,
+            ),
+
+          name:
+            profile.name ||
+            profile.login,
+
+          email:
+            profile.email ??
+            null,
+
+          image:
+            profile.avatar_url,
         };
       },
     }),
   ],
-  callbacks: {
-    async jwt({ token, user, profile }) {
-      if (user) {
-        token.id = user.id;
-        token.plan = "FREE";
-        token.creditsRemaining = 3;
-      }
 
-      if (profile && typeof profile === "object" && "login" in profile) {
-        const username = profile.login;
-        if (typeof username === "string") {
-          token.githubUsername = username;
+  callbacks: {
+    async signIn({
+      account,
+      profile,
+    }) {
+      return (
+        account?.provider ===
+          "github" &&
+        isGitHubAuthProfile(
+          profile,
+        )
+      );
+    },
+
+    async jwt({
+      token,
+      account,
+      profile,
+    }) {
+      if (
+        account?.provider ===
+          "github" &&
+        isGitHubAuthProfile(
+          profile,
+        )
+      ) {
+        const authUser =
+          await upsertGitHubUserIdentity(
+            {
+              githubUserId:
+                String(
+                  profile.id,
+                ),
+
+              login:
+                profile.login,
+
+              name:
+                profile.name ??
+                profile.login,
+
+              email:
+                profile.email ??
+                null,
+
+              avatarUrl:
+                profile.avatar_url ??
+                null,
+            },
+          );
+
+        // Canonical RepoMind identity.
+        token.id =
+          authUser.id;
+
+        token.plan =
+          authUser.plan;
+
+        token.creditsRemaining =
+          authUser.creditsRemaining;
+
+        token.githubUserId =
+          authUser.githubUserId;
+
+        token.githubUsername =
+          authUser.githubUsername;
+
+        if (
+          typeof account.access_token ===
+          "string"
+        ) {
+          const accountWithRefresh =
+            account as
+              typeof account & {
+                refresh_token?:
+                  string;
+
+                refresh_token_expires_in?:
+                  number;
+              };
+
+          const now =
+            Math.floor(
+              Date.now() /
+                1000,
+            );
+
+          /*
+           * Tokens are NOT stored in the session JWT.
+           *
+           * They are encrypted in the server database.
+           */
+          await saveGitHubUserCredentials({
+            userId:
+              authUser.id,
+
+            accessToken:
+              account.access_token,
+
+            accessTokenExpiresAt:
+              typeof account.expires_at ===
+              "number"
+                ? account.expires_at
+                : null,
+
+            refreshToken:
+              typeof accountWithRefresh.refresh_token ===
+              "string"
+                ? accountWithRefresh.refresh_token
+                : null,
+
+            refreshTokenExpiresAt:
+              typeof accountWithRefresh.refresh_token_expires_in ===
+              "number"
+                ? now +
+                  accountWithRefresh.refresh_token_expires_in
+                : null,
+          });
         }
       }
 
       return token;
     },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id =
-          (typeof token.id === "string" ? token.id : null) ??
-          (typeof token.sub === "string" ? token.sub : "");
-        session.user.plan = "FREE";
-        session.user.creditsRemaining =
-          typeof token.creditsRemaining === "number" ? token.creditsRemaining : 3;
-        session.user.githubUsername =
-          typeof token.githubUsername === "string" ? token.githubUsername : null;
+
+    async session({
+      session,
+      token,
+    }) {
+      if (
+        !session.user ||
+        typeof token.id !==
+          "string" ||
+        !token.githubUserId
+      ) {
+        // Any session without a GitHub identity is treated as signed out.
+        return {
+          ...session,
+          user: undefined,
+        };
       }
+
+      session.user.id =
+        token.id;
+
+      session.user.plan =
+        token.plan ??
+        "FREE";
+
+      session.user.creditsRemaining =
+        token.creditsRemaining ??
+        3;
+
+      session.user.githubUserId =
+        token.githubUserId;
+
+      session.user.githubUsername =
+        token.githubUsername ??
+        "github-user";
 
       return session;
     },
-    async redirect({ url, baseUrl }) {
-      const dashboardUrl = `${baseUrl}/user/dashboard`;
-      let resolvedUrl = dashboardUrl;
 
-      if (url.startsWith("/")) {
-        resolvedUrl = `${baseUrl}${url}`;
+    async redirect({
+      url,
+      baseUrl,
+    }) {
+      const dashboardUrl =
+        `${baseUrl}/user/dashboard`;
+
+      let resolvedUrl =
+        dashboardUrl;
+
+      if (
+        url.startsWith("/")
+      ) {
+        resolvedUrl =
+          `${baseUrl}${url}`;
       } else {
         try {
-          const parsedUrl = new URL(url);
-          if (parsedUrl.origin !== baseUrl) {
+          const parsedUrl =
+            new URL(url);
+
+          if (
+            parsedUrl.origin !==
+            baseUrl
+          ) {
             return dashboardUrl;
           }
 
-          resolvedUrl = parsedUrl.toString();
+          resolvedUrl =
+            parsedUrl.toString();
         } catch {
           return dashboardUrl;
         }
       }
 
-      const resolvedPathname = new URL(resolvedUrl).pathname;
+      const pathname =
+        new URL(
+          resolvedUrl,
+        ).pathname;
 
       if (
-        resolvedPathname === "/" ||
-        resolvedPathname.startsWith("/login") ||
-        resolvedPathname.startsWith("/signup")
+        pathname === "/" ||
+        pathname.startsWith(
+          "/login",
+        )
       ) {
         return dashboardUrl;
       }
@@ -124,10 +272,23 @@ export const authOptions: NextAuthOptions = {
       return resolvedUrl;
     },
   },
+
   pages: {
-    signIn: "/login",
+    signIn:
+      "/login",
+
+    error:
+      "/login",
   },
+
   session: {
-    strategy: "jwt",
+    strategy:
+      "jwt",
+
+    maxAge:
+      30 *
+      24 *
+      60 *
+      60,
   },
 };

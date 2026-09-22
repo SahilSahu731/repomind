@@ -89,7 +89,7 @@ export async function issueExtensionToken(
       name: user.name,
       email: user.email,
       picture: user.image,
-      githubUsername: user.githubUsername,
+      githubUsername: user.githubUsername ?? undefined,
     },
   });
 }

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import type { RepoRow } from "@/lib/supabaseDb";
 import { RepoAnalyzeBar } from "@/components/landing/RepoAnalyzeBar";
+import { GitHubRepositoryPicker } from "@/components/workspace/GitHubRepositoryPicker";
 import { announceCreditsChanged } from "@/lib/creditBalance";
 import { useWorkspacePreferences } from "@/lib/workspacePreferences";
 
@@ -54,6 +55,7 @@ const FILTERS: Array<{ value: WorkspaceFilter; label: string }> = [
 function formatStatus(status: string): string {
   if (status === "COMPLETE") return "Report ready";
   if (status === "FAILED") return "Needs attention";
+  if (status === "CANCELLED") return "Cancelled";
 
   return status
     .toLowerCase()
@@ -68,6 +70,9 @@ function statusTone(status: string): string {
   }
   if (status === "FAILED") {
     return "border-[#a33f2b] bg-[#ead8cf] text-[#82331f]";
+  }
+  if (status === "CANCELLED") {
+    return "border-[#8a8378] bg-[#e4ddd1] text-[#5e5952]";
   }
   return "border-[#d75c3f] bg-[#f0d9cf] text-[#8c3826]";
 }
@@ -107,7 +112,7 @@ function EmptyWorkspace() {
           See the system before the syntax.
         </h2>
         <p className="mt-7 max-w-[34rem] text-base leading-7 text-[#5e5952] sm:text-lg sm:leading-8">
-          Turn any public repository into a practical map of its architecture, dependencies, entry points, and safest route in.
+          Connect GitHub to analyze public or private repositories with read-only access, or paste a public repository URL for a quick analysis.
         </p>
 
         <div className="mt-8 grid max-w-[34rem] grid-cols-3 border-y border-[#292721] py-4">
@@ -131,6 +136,12 @@ function EmptyWorkspace() {
             <p className="mt-1 text-xs text-[#6d675f]">Paste a public GitHub repository below.</p>
           </div>
           <ShieldCheck className="h-5 w-5 text-[#667a60]" />
+        </div>
+        <GitHubRepositoryPicker />
+        <div className="my-4 flex items-center gap-3">
+          <div className="h-px flex-1 bg-[#292721]/20" />
+          <span className="font-mono text-[8px] uppercase tracking-[.14em] text-[#8a8378]">or public URL</span>
+          <div className="h-px flex-1 bg-[#292721]/20" />
         </div>
         <RepoAnalyzeBar />
       </div>
@@ -296,7 +307,15 @@ export function RepositoryWorkspace() {
             <Plus className="h-5 w-5 text-[#d75c3f]" />
           </div>
 
-          <form onSubmit={startAnalysis} className="mt-5">
+          <div className="mt-5">
+            <GitHubRepositoryPicker />
+          </div>
+          <div className="my-5 flex items-center gap-3">
+            <div className="h-px flex-1 bg-[#292721]/20" />
+            <span className="font-mono text-[8px] uppercase tracking-[.14em] text-[#8a8378]">or public URL</span>
+            <div className="h-px flex-1 bg-[#292721]/20" />
+          </div>
+          <form onSubmit={startAnalysis}>
             <label htmlFor="workspace-github-url" className="sr-only">GitHub repository URL</label>
             <div className="flex flex-col gap-2 sm:flex-row">
               <div className="relative min-w-0 flex-1">

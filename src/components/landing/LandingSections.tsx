@@ -365,10 +365,10 @@ export function LandingCTA() {
             </div>
           </div>
           <Link
-            href="/signup"
+            href="/login"
             className="group mt-12 inline-flex h-14 w-fit items-center gap-4 rounded-full bg-[#201f1b] px-7 text-sm font-medium text-[#f4efe4] transition hover:bg-[#f4efe4] hover:text-[#201f1b]"
           >
-            Create your account
+            Continue with GitHub
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
         </div>

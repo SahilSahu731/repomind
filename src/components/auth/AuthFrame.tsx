@@ -8,7 +8,7 @@ interface AuthFrameProps {
   eyebrow: string;
   visualTitle: string;
   children: React.ReactNode;
-  footerLink: {
+  footerLink?: {
     href: string;
     label: string;
     text: string;
@@ -39,7 +39,7 @@ export function AuthFrame({
 
             <div className="mt-4 sm:mt-5">{children}</div>
 
-            <p className="mt-4 border-t border-[#292721]/20 pt-3 text-sm text-[#6d675f] sm:mt-5 sm:pt-4">
+            {footerLink ? <p className="mt-4 border-t border-[#292721]/20 pt-3 text-sm text-[#6d675f] sm:mt-5 sm:pt-4">
               {footerLink.text}{" "}
               <Link
                 href={footerLink.href}
@@ -48,7 +48,7 @@ export function AuthFrame({
                 {footerLink.label}
                 <ArrowDownRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:translate-y-0.5" />
               </Link>
-            </p>
+            </p> : null}
 
             <div className="auth-security mt-3 hidden items-center gap-2 font-mono text-[8px] uppercase tracking-[.12em] text-[#777168] sm:flex">
               <ShieldCheck className="h-3.5 w-3.5 text-[#667a60]" />

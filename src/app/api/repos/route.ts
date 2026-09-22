@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
       "ANALYZING",
       "COMPLETE",
       "FAILED",
+      "CANCELLED",
     ]);
 
     if (!allowedStatuses.has(status)) {

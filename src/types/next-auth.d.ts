@@ -1,27 +1,42 @@
-import "next-auth";
-import "next-auth/jwt";
+import type {
+  DefaultSession,
+} from "next-auth";
 
-type UserPlan = "FREE" | "PRO" | "ENTERPRISE";
+import type {
+  Plan,
+} from "@/lib/supabaseDb";
 
 declare module "next-auth" {
   interface Session {
-    user: {
-      id: string;
-      name?: string | null;
-      email?: string | null;
-      image?: string | null;
-      plan: UserPlan;
-      creditsRemaining: number;
-      githubUsername?: string | null;
-    };
+    user?:
+      DefaultSession["user"] & {
+        // RepoMind UUID
+        id: string;
+
+        plan: Plan;
+
+        creditsRemaining:
+          number;
+
+        githubUserId:
+          string;
+
+        githubUsername:
+          string;
+      };
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
-    plan?: UserPlan;
+
+    plan?: Plan;
+
     creditsRemaining?: number;
-    githubUsername?: string | null;
+
+    githubUserId?: string;
+
+    githubUsername?: string;
   }
 }

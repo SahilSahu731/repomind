@@ -1,139 +1,648 @@
 import fs from "node:fs";
+
 import os from "node:os";
+
 import path from "node:path";
+
+import {
+  createGitHubInstallationToken,
+} from "@/lib/github/app";
+
 import {
   consumeCreditIfNeeded,
   createAnalysisResult,
+  getJobById,
   getRepoById,
   updateJob as updateJobRecord,
   updateRepo as updateRepoRecord,
 } from "@/lib/supabaseDb";
-import { analyzeWithAI } from "@/lib/services/analyzer";
-import { cleanupRepo, cloneRepo } from "@/lib/services/cloner";
-import { calculateContributionScore } from "@/lib/services/contributionScore";
-import { detectEntryPoints } from "@/lib/services/entryDetector";
-import { buildDependencyGraph } from "@/lib/services/graphBuilder";
-import { walkDirectory } from "@/lib/services/parser";
-import { detectTechStack } from "@/lib/services/techDetector";
+
+import {
+  analyzeWithAI,
+} from "@/lib/services/analyzer";
+
+import {
+  cleanupRepo,
+  cloneRepo,
+} from "@/lib/services/cloner";
+
+import {
+  calculateContributionScore,
+} from "@/lib/services/contributionScore";
+
+import {
+  detectEntryPoints,
+} from "@/lib/services/entryDetector";
+
+import {
+  buildDependencyGraph,
+} from "@/lib/services/graphBuilder";
+
+import {
+  walkDirectory,
+} from "@/lib/services/parser";
+
+import {
+  detectTechStack,
+} from "@/lib/services/techDetector";
 
 export interface AnalyzeRepoJobData {
   repoId: string;
+
   jobId: string;
+
   githubUrl: string;
+
+  /*
+   * We queue IDs, NEVER credentials.
+   */
+  githubInstallationId:
+    | number
+    | null;
+
+  githubRepositoryId:
+    | string
+    | null;
+
+  isPrivate: boolean;
+
   owner: string;
+
   repo: string;
+
   branch: string;
 }
 
-type JobStatus = "QUEUED" | "PROCESSING" | "COMPLETED" | "FAILED" | "TIMEOUT";
-type RepoStatus = "QUEUED" | "CLONING" | "PARSING" | "ANALYZING" | "COMPLETE" | "FAILED";
+interface ProcessJobOptions {
+  attemptsMade:
+    number;
 
-export async function processAnalyzeRepoJob(data: AnalyzeRepoJobData): Promise<void> {
-  const { repoId, jobId, githubUrl, owner, repo, branch } = data;
-  const targetDir = getJobTargetDirectory(jobId);
+  maxAttempts:
+    number;
+}
+
+type JobStatus =
+  | "QUEUED"
+  | "PROCESSING"
+  | "COMPLETED"
+  | "FAILED"
+  | "TIMEOUT"
+  | "CANCELLED";
+
+type RepoStatus =
+  | "QUEUED"
+  | "CLONING"
+  | "PARSING"
+  | "ANALYZING"
+  | "COMPLETE"
+  | "FAILED"
+  | "CANCELLED";
+
+export function isRecoverableAnalysisError(
+  error: unknown,
+): boolean {
+  const message =
+    error instanceof
+      Error
+      ? error.message
+      : String(error);
+
+  /*
+   * Permanent user/input/access errors.
+   */
+  if (
+    /REPO_NOT_FOUND|BRANCH_NOT_FOUND|INVALID_|too large to analyze safely|permission to read/i.test(
+      message,
+    )
+  ) {
+    return false;
+  }
+
+  /*
+   * Temporary infrastructure/provider failures.
+   */
+  return (
+    /timeout|timed out|network|fetch failed|ECONN|EAI_AGAIN|429|5\d\d|rate limit|temporar/i.test(
+      message,
+    ) ||
+    !/REPO_NOT_FOUND|BRANCH_NOT_FOUND|INVALID_/i.test(
+      message,
+    )
+  );
+}
+
+export async function processAnalyzeRepoJob(
+  data:
+    AnalyzeRepoJobData,
+
+  options:
+    ProcessJobOptions,
+): Promise<void> {
+  const {
+    repoId,
+    jobId,
+    githubUrl,
+    githubInstallationId,
+    githubRepositoryId,
+    owner,
+    repo,
+    branch,
+  } = data;
+
+  const targetDir =
+    getJobTargetDirectory(
+      jobId,
+    );
 
   try {
-    const repoRecord = await getRepoById(repoId);
+    const repoRecord =
+      await getRepoById(
+        repoId,
+      );
+
     if (!repoRecord) {
-      throw new Error(`REPO_NOT_FOUND: Missing repo for job ${jobId}`);
+      throw new Error(
+        `REPO_NOT_FOUND: Missing repo for job ${jobId}`,
+      );
     }
 
-    await updateJob(jobId, "PROCESSING", 10, "cloning", { markStarted: true });
-    await updateRepo(repoId, "CLONING");
-    await cloneRepo(githubUrl, branch, targetDir);
+    if (
+      await stopIfCancelled(
+        jobId,
+        repoId,
+      )
+    ) {
+      return;
+    }
 
-    await updateJob(jobId, "PROCESSING", 30, "parsing");
-    await updateRepo(repoId, "PARSING");
-    const { tree, flatFiles, stats } = await walkDirectory(targetDir, targetDir);
+    await updateJob(
+      jobId,
+      "PROCESSING",
+      8,
+      "fetching_repository",
+      {
+        markStarted:
+          true,
+      },
+    );
 
-    await updateJob(jobId, "PROCESSING", 50, "detecting_stack");
-    const techStack = await detectTechStack(targetDir, flatFiles);
+    await updateRepo(
+      repoId,
+      "CLONING",
+    );
 
-    await updateJob(jobId, "PROCESSING", 65, "building_graph");
-    await updateRepo(repoId, "ANALYZING");
-    const depGraph = await buildDependencyGraph(flatFiles, targetDir);
+    /*
+     * Private repository credentials are generated here,
+     * inside the trusted worker.
+     *
+     * They never enter BullMQ payload data.
+     */
+    const installationToken =
+      githubInstallationId
+        ? await createGitHubInstallationToken(
+            githubInstallationId,
 
-    await updateJob(jobId, "PROCESSING", 75, "detecting_entries");
-    const entryPoints = await detectEntryPoints(flatFiles, depGraph);
+            githubRepositoryId ??
+              undefined,
+          )
+        : null;
 
-    const readme = readFileIfExists(path.join(targetDir, "README.md"));
-    const packageJson = readFileIfExists(path.join(targetDir, "package.json"));
+    await cloneRepo(
+      githubUrl,
+      branch,
+      targetDir,
+      {
+        accessToken:
+          installationToken
+            ?.token,
+      },
+    );
 
-    await updateJob(jobId, "PROCESSING", 90, "ai_analysis");
-    const aiResult = await analyzeWithAI({
-      fileTree: tree,
+    if (
+      await stopIfCancelled(
+        jobId,
+        repoId,
+      )
+    ) {
+      return;
+    }
+
+    await updateJob(
+      jobId,
+      "PROCESSING",
+      28,
+      "parsing_source",
+    );
+
+    await updateRepo(
+      repoId,
+      "PARSING",
+    );
+
+    const {
+      tree,
       flatFiles,
-      depGraph,
-      techStack,
-      entryPoints,
-      readme,
-      packageJson,
-      owner,
-      repo,
-    });
+      stats,
+    } =
+      await walkDirectory(
+        targetDir,
+        targetDir,
+      );
 
-    const contributionScore = calculateContributionScore({
-      fileTree: flatFiles.map((file) => file.path),
-      readmeContent: readme,
-      languages: techStack.languages,
-      frameworks: techStack.frameworks,
-    });
+    if (
+      await stopIfCancelled(
+        jobId,
+        repoId,
+      )
+    ) {
+      return;
+    }
+
+    await updateJob(
+      jobId,
+      "PROCESSING",
+      45,
+      "detecting_stack",
+    );
+
+    const techStack =
+      await detectTechStack(
+        targetDir,
+        flatFiles,
+      );
+
+    if (
+      await stopIfCancelled(
+        jobId,
+        repoId,
+      )
+    ) {
+      return;
+    }
+
+    await updateJob(
+      jobId,
+      "PROCESSING",
+      60,
+      "building_graph",
+    );
+
+    await updateRepo(
+      repoId,
+      "ANALYZING",
+    );
+
+    const depGraph =
+      await buildDependencyGraph(
+        flatFiles,
+        targetDir,
+      );
+
+    if (
+      await stopIfCancelled(
+        jobId,
+        repoId,
+      )
+    ) {
+      return;
+    }
+
+    await updateJob(
+      jobId,
+      "PROCESSING",
+      72,
+      "detecting_entry_points",
+    );
+
+    const entryPoints =
+      await detectEntryPoints(
+        flatFiles,
+        depGraph,
+      );
+
+    const readme =
+      readFileIfExists(
+        path.join(
+          targetDir,
+          "README.md",
+        ),
+      );
+
+    const packageJson =
+      readFileIfExists(
+        path.join(
+          targetDir,
+          "package.json",
+        ),
+      );
+
+    if (
+      await stopIfCancelled(
+        jobId,
+        repoId,
+      )
+    ) {
+      return;
+    }
+
+    await updateJob(
+      jobId,
+      "PROCESSING",
+      86,
+      "generating_analysis",
+    );
+
+    const aiResult =
+      await analyzeWithAI({
+        fileTree:
+          tree,
+
+        flatFiles,
+
+        depGraph,
+
+        techStack,
+
+        entryPoints,
+
+        readme,
+
+        packageJson,
+
+        owner,
+
+        repo,
+      });
+
+    if (
+      await stopIfCancelled(
+        jobId,
+        repoId,
+      )
+    ) {
+      return;
+    }
+
+    await updateJob(
+      jobId,
+      "PROCESSING",
+      95,
+      "persisting_results",
+    );
+
+    const contributionScore =
+      calculateContributionScore({
+        fileTree:
+          flatFiles.map(
+            (file) =>
+              file.path,
+          ),
+
+        readmeContent:
+          readme,
+
+        languages:
+          techStack.languages,
+
+        frameworks:
+          techStack.frameworks,
+      });
 
     await createAnalysisResult({
       repoId,
-      summary: aiResult.summary,
-      architecture: aiResult.architecture,
-      fileTree: tree,
-      dependencyGraph: depGraph,
+
+      summary:
+        aiResult.summary,
+
+      architecture:
+        aiResult.architecture,
+
+      fileTree:
+        tree,
+
+      dependencyGraph:
+        depGraph,
+
       entryPoints,
-      startGuide: aiResult.startGuide,
-      fileSummaries: aiResult.fileSummaries,
+
+      startGuide:
+        aiResult.startGuide,
+
+      fileSummaries:
+        aiResult.fileSummaries,
+
       techStack,
+
       contributionScore,
     });
 
-    await consumeCreditIfNeeded(repoRecord.userId);
+    if (
+      await stopIfCancelled(
+        jobId,
+        repoId,
+      )
+    ) {
+      return;
+    }
 
-    await updateRepoRecord(repoId, {
-      status: "COMPLETE",
-      totalFiles: stats.totalFiles,
-      totalLines: stats.totalLines,
-      defaultLanguage: stats.primaryLanguage,
-      analyzedAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      errorMessage: null,
-    });
-    await updateJob(jobId, "COMPLETED", 100, "complete");
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown analysis error";
+    /*
+     * Legacy credit model retained only so Phase 1-3 does not
+     * break existing free-account behavior.
+     */
+    await consumeCreditIfNeeded(
+      repoRecord.userId,
+    );
 
-    await Promise.allSettled([
-      updateJob(jobId, "FAILED", 0, "failed", { error: message }),
-      updateRepo(repoId, "FAILED", message),
-    ]);
+    await updateRepoRecord(
+      repoId,
+      {
+        status:
+          "COMPLETE",
+
+        totalFiles:
+          stats.totalFiles,
+
+        totalLines:
+          stats.totalLines,
+
+        defaultLanguage:
+          stats.primaryLanguage,
+
+        analyzedAt:
+          new Date()
+            .toISOString(),
+
+        expiresAt:
+          new Date(
+            Date.now() +
+              24 *
+                60 *
+                60 *
+                1000,
+          ).toISOString(),
+
+        errorMessage:
+          null,
+      },
+    );
+
+    await updateJob(
+      jobId,
+      "COMPLETED",
+      100,
+      "complete",
+    );
+  } catch (error) {
+    const message =
+      error instanceof
+        Error
+        ? error.message
+        : "Unknown analysis error";
+
+    const recoverable =
+      isRecoverableAnalysisError(
+        error,
+      );
+
+    const hasRetryRemaining =
+      recoverable &&
+      options.attemptsMade +
+        1 <
+        options.maxAttempts;
+
+    if (
+      hasRetryRemaining
+    ) {
+      await Promise.allSettled([
+        updateJobRecord(
+          jobId,
+          {
+            status:
+              "QUEUED",
+
+            currentStep:
+              `retrying_${
+                options.attemptsMade +
+                1
+              }`,
+
+            errorLog:
+              message,
+          },
+        ),
+
+        updateRepoRecord(
+          repoId,
+          {
+            status:
+              "QUEUED",
+
+            errorMessage:
+              "A temporary failure occurred. RepoMind will retry automatically.",
+          },
+        ),
+      ]);
+    } else {
+      await Promise.allSettled([
+        updateJob(
+          jobId,
+          "FAILED",
+          0,
+          "failed",
+          {
+            error:
+              message,
+          },
+        ),
+
+        updateRepo(
+          repoId,
+          "FAILED",
+          message,
+        ),
+      ]);
+    }
 
     throw error;
   } finally {
-    await cleanupRepo(targetDir);
+    await cleanupRepo(
+      targetDir,
+    );
   }
 }
 
-function getJobTargetDirectory(jobId: string): string {
-  if (!/^[A-Za-z0-9_-]+$/.test(jobId)) {
-    throw new Error("INVALID_JOB_ID: Job identifier contains unsupported characters");
+async function stopIfCancelled(
+  jobId: string,
+  repoId: string,
+): Promise<boolean> {
+  const job =
+    await getJobById(
+      jobId,
+    );
+
+  if (
+    job?.status !==
+    "CANCELLED"
+  ) {
+    return false;
   }
 
-  return path.join(os.tmpdir(), "repomind-repos", jobId);
+  await updateRepoRecord(
+    repoId,
+    {
+      status:
+        "CANCELLED",
+
+      errorMessage:
+        "Analysis cancelled by the user",
+    },
+  ).catch(
+    () => undefined,
+  );
+
+  return true;
 }
 
-function readFileIfExists(filePath: string): string | undefined {
+function getJobTargetDirectory(
+  jobId: string,
+): string {
+  if (
+    !/^[A-Za-z0-9_-]+$/.test(
+      jobId,
+    )
+  ) {
+    throw new Error(
+      "INVALID_JOB_ID: Job identifier contains unsupported characters",
+    );
+  }
+
+  return path.join(
+    os.tmpdir(),
+    "repomind-repos",
+    jobId,
+  );
+}
+
+function readFileIfExists(
+  filePath: string,
+): string | undefined {
   try {
-    const stat = fs.lstatSync(filePath);
-    if (!stat.isFile() || stat.isSymbolicLink()) {
+    const stat =
+      fs.lstatSync(
+        filePath,
+      );
+
+    if (
+      !stat.isFile() ||
+      stat.isSymbolicLink()
+    ) {
       return undefined;
     }
 
-    return fs.readFileSync(filePath, "utf8");
+    return fs.readFileSync(
+      filePath,
+      "utf8",
+    );
   } catch {
     return undefined;
   }
@@ -144,23 +653,73 @@ async function updateJob(
   status: JobStatus,
   progress: number,
   step: string,
-  options: { error?: string; markStarted?: boolean } = {}
+  options: {
+    error?: string;
+    markStarted?: boolean;
+  } = {},
 ): Promise<void> {
-  const isFinished = status === "COMPLETED" || status === "FAILED" || status === "TIMEOUT";
+  const isFinished =
+    [
+      "COMPLETED",
+      "FAILED",
+      "TIMEOUT",
+      "CANCELLED",
+    ].includes(
+      status,
+    );
 
-  await updateJobRecord(jobId, {
-    status,
-    progress,
-    currentStep: step,
-    ...(options.markStarted ? { startedAt: new Date().toISOString() } : {}),
-    ...(isFinished ? { completedAt: new Date().toISOString() } : {}),
-    ...(options.error ? { errorLog: options.error } : {}),
-  });
+  await updateJobRecord(
+    jobId,
+    {
+      status,
+
+      progress,
+
+      currentStep:
+        step,
+
+      ...(options.markStarted
+        ? {
+            startedAt:
+              new Date()
+                .toISOString(),
+          }
+        : {}),
+
+      ...(isFinished
+        ? {
+            completedAt:
+              new Date()
+                .toISOString(),
+          }
+        : {}),
+
+      ...(options.error
+        ? {
+            errorLog:
+              options.error,
+          }
+        : {}),
+    },
+  );
 }
 
-async function updateRepo(repoId: string, status: RepoStatus, error?: string): Promise<void> {
-  await updateRepoRecord(repoId, {
-    status,
-    ...(error ? { errorMessage: error } : {}),
-  });
+async function updateRepo(
+  repoId: string,
+  status: RepoStatus,
+  error?: string,
+): Promise<void> {
+  await updateRepoRecord(
+    repoId,
+    {
+      status,
+
+      ...(error
+        ? {
+            errorMessage:
+              error,
+          }
+        : {}),
+    },
+  );
 }

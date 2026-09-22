@@ -222,6 +222,9 @@ export async function localGetRepoByGithubUrlAndBranch(
 export async function localCreateRepo(input: {
   userId: string;
   githubUrl: string;
+  githubInstallationId?: number | null;
+  githubRepositoryId?: string | null;
+  isPrivate?: boolean;
   owner: string;
   name: string;
   branch: string;

@@ -27,7 +27,7 @@ const boundaries = [
     number: "01",
     title: "Read-only by design",
     description:
-      "RepoMind inspects public repository content. It does not commit, push, open pull requests, or modify the source repository.",
+      "RepoMind inspects repositories with read-only access. It does not commit, push, open pull requests, or modify the source repository.",
   },
   {
     icon: Trash2,
@@ -47,8 +47,8 @@ const boundaries = [
 
 const promises = [
   [GitPullRequest, "Repository changes", "Never written"],
-  [CloudOff, "Private repositories", "Not supported today"],
-  [LockKeyhole, "Stored passwords", "Hashed, never readable"],
+  [CloudOff, "Private repositories", "Read-only, explicitly selected"],
+  [LockKeyhole, "GitHub credentials", "Encrypted, server-side only"],
   [ScanLine, "Generated analysis", "Evidence-led, review required"],
 ];
 

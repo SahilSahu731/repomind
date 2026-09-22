@@ -24,7 +24,7 @@ function parseGitHubRepo(value: string) {
 }
 
 export function RepoAnalyzeBar() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [githubUrl, setGithubUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,11 +32,14 @@ export function RepoAnalyzeBar() {
   const [statusMessage, setStatusMessage] = useState("");
 
   const parsedRepo = useMemo(() => parseGitHubRepo(githubUrl), [githubUrl]);
+  const isGitHubAuthenticated = Boolean(
+    status === "authenticated" && session?.user?.id && session.user.githubUserId
+  );
   const submitLabel = isSubmitting
     ? "Starting analysis"
     : status === "loading"
       ? "Preparing workspace"
-      : status === "authenticated"
+      : isGitHubAuthenticated
         ? "Analyze repository"
         : "Continue to analyze";
 
@@ -51,7 +54,7 @@ export function RepoAnalyzeBar() {
 
     setError(null);
 
-    if (status !== "authenticated") {
+    if (!isGitHubAuthenticated) {
       router.push(`/login?callbackUrl=/user/dashboard&repoUrl=${encodeURIComponent(githubUrl)}`);
       return;
     }

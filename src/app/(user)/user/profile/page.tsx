@@ -55,6 +55,9 @@ function activityCopy(activity: AccountActivityItem) {
   if (activity.status === "FAILED") {
     return { label: "Analysis needs attention", detail: "The repository stopped before a report was produced." };
   }
+  if (activity.status === "CANCELLED") {
+    return { label: "Analysis cancelled", detail: "The run was cancelled before a report was produced." };
+  }
 
   const step = (activity.currentStep ?? activity.status)
     .toLowerCase()
@@ -335,7 +338,7 @@ function ProfileContent({ overview }: { overview: AccountOverview }) {
                     <p className="mt-1 truncate font-mono text-[8px] uppercase tracking-[.12em] text-[#6d675f]">{repo.owner} / {repo.branch === "HEAD" ? "default" : repo.branch}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-medium">{repo.status === "COMPLETE" ? "Ready" : repo.status === "FAILED" ? "Review" : `${repo.latestJob?.progress ?? 0}%`}</p>
+                    <p className="text-xs font-medium">{repo.status === "COMPLETE" ? "Ready" : repo.status === "FAILED" ? "Review" : repo.status === "CANCELLED" ? "Cancelled" : `${repo.latestJob?.progress ?? 0}%`}</p>
                     <p className="mt-1 font-mono text-[7px] uppercase tracking-[.1em] text-[#777168]">{formatDate(repo.analyzedAt ?? repo.createdAt)}</p>
                   </div>
                 </Link>

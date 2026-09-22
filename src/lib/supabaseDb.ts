@@ -24,8 +24,8 @@ type RequestMethod = "GET" | "POST" | "PATCH";
 type LogicalTable = "User" | "Repo" | "Job" | "AnalysisResult";
 
 export type Plan = "FREE" | "PRO" | "ENTERPRISE";
-export type RepoStatus = "QUEUED" | "CLONING" | "PARSING" | "ANALYZING" | "COMPLETE" | "FAILED";
-export type JobStatus = "QUEUED" | "PROCESSING" | "COMPLETED" | "FAILED" | "TIMEOUT";
+export type RepoStatus = "QUEUED" | "CLONING" | "PARSING" | "ANALYZING" | "COMPLETE" | "FAILED" | "CANCELLED";
+export type JobStatus = "QUEUED" | "PROCESSING" | "COMPLETED" | "FAILED" | "TIMEOUT" | "CANCELLED";
 
 interface SupabaseQueryOptions {
   count?: "exact";
@@ -53,6 +53,9 @@ export interface RepoRow {
   id: string;
   userId: string;
   githubUrl: string;
+  githubInstallationId?: number | null;
+  githubRepositoryId?: string | null;
+  isPrivate?: boolean;
   owner: string;
   name: string;
   branch: string;
@@ -280,6 +283,9 @@ export async function getRepoByGithubUrlAndBranch(
 export async function createRepo(input: {
   userId: string;
   githubUrl: string;
+  githubInstallationId?: number | null;
+  githubRepositoryId?: string | null;
+  isPrivate?: boolean;
   owner: string;
   name: string;
   branch: string;

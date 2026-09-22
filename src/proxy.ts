@@ -4,7 +4,7 @@ import { getToken } from "next-auth/jwt";
 import { env } from "@/lib/env";
 import { limitGlobal } from "@/lib/ratelimit";
 
-const AUTH_PAGES = new Set(["/login", "/signup"]);
+const AUTH_PAGES = new Set(["/login"]);
 const NEXTAUTH_API_ACTIONS = [
   "/api/auth/callback",
   "/api/auth/csrf",
@@ -31,6 +31,19 @@ function noStore(response: NextResponse): NextResponse {
   return response;
 }
 
+function clearLegacyAuthCookies(response: NextResponse): NextResponse {
+  for (const name of [
+    "next-auth.session-token",
+    "__Secure-next-auth.session-token",
+    "authjs.session-token",
+    "__Secure-authjs.session-token",
+  ]) {
+    response.cookies.delete(name);
+  }
+
+  return response;
+}
+
 export async function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
@@ -40,6 +53,7 @@ export async function proxy(req: NextRequest) {
   if (
     pathname.startsWith("/api/") &&
     pathname !== "/api/health" &&
+    pathname !== "/api/github/webhook" &&
     !isNextAuthApi(pathname)
   ) {
     const forwardedFor = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
@@ -69,7 +83,8 @@ export async function proxy(req: NextRequest) {
       req,
       secret: env.NEXTAUTH_SECRET,
     });
-    const isAuthenticated = Boolean(token?.id ?? token?.sub);
+    const isAuthenticated = Boolean(token?.id && token?.githubUserId);
+    const hasLegacySession = Boolean(token && !isAuthenticated);
 
     if (isAuthPage && isAuthenticated) {
       return noStore(NextResponse.redirect(new URL("/user/dashboard", req.url)));
@@ -78,14 +93,16 @@ export async function proxy(req: NextRequest) {
     if (isProtectedUserPage && !isAuthenticated) {
       const loginUrl = new URL("/login", req.url);
       loginUrl.searchParams.set("callbackUrl", `${pathname}${search}`);
-      return noStore(NextResponse.redirect(loginUrl));
+      const response = noStore(NextResponse.redirect(loginUrl));
+      return hasLegacySession ? clearLegacyAuthCookies(response) : response;
     }
 
     if (pathname === "/user") {
       return noStore(NextResponse.redirect(new URL("/user/dashboard", req.url)));
     }
 
-    return noStore(NextResponse.next());
+    const response = noStore(NextResponse.next());
+    return hasLegacySession ? clearLegacyAuthCookies(response) : response;
   }
 
   return NextResponse.next();

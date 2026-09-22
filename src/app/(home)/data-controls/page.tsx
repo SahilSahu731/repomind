@@ -18,7 +18,7 @@ export default function DataControlsPage() {
         {
           title: "Temporary source copies",
           body: [
-            "A public repository is cloned into isolated temporary storage for analysis. The working copy is deleted after the analysis succeeds or fails. RepoMind stores the resulting report and repository metadata, not a permanent source-code mirror.",
+            "An authorized repository is cloned into isolated temporary storage for analysis. The working copy is deleted after the analysis succeeds, fails, or is cancelled. RepoMind stores the resulting report and repository metadata, not a permanent source-code mirror.",
           ],
         },
         {
@@ -38,7 +38,7 @@ export default function DataControlsPage() {
         {
           title: "Correction and deletion",
           body: [
-            "Use the Support page to request correction or deletion. Include the email address associated with the account and never include a password, OAuth token, API key, or other secret. RepoMind may ask you to verify control of the account before deleting records.",
+            "Use the Support page to request correction or deletion. Include your GitHub username or the email associated with GitHub and never include an OAuth token, API key, private key, or other secret. RepoMind may ask you to verify control of the account before deleting records.",
             "A verified account-deletion request covers the RepoMind account record, saved repository records, jobs, and generated reports. Third-party providers may retain limited security, billing, or backup records where legally or operationally required.",
           ],
         },

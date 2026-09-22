@@ -13,6 +13,7 @@ import {
   Layers,
   Link2,
   Loader2,
+  XCircle,
 } from "lucide-react";
 import type { AnalysisResult } from "@/types";
 import type { JobRow, RepoRow } from "@/lib/supabaseDb";
@@ -50,6 +51,9 @@ function statusTone(status: string): string {
   if (status === "FAILED" || status === "TIMEOUT") {
     return "border-[#a33f2b] bg-[#ead8cf] text-[#82331f]";
   }
+  if (status === "CANCELLED") {
+    return "border-[#8a8378] bg-[#e4ddd1] text-[#5e5952]";
+  }
   return "border-[#d75c3f] bg-[#f0d9cf] text-[#8c3826]";
 }
 
@@ -83,6 +87,7 @@ export default function UserDashboardPage() {
   const [repo, setRepo] = useState<RepoRow | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [job, setJob] = useState<JobRow | null>(null);
+  const [cancelling, setCancelling] = useState(false);
   const repoStatus = repo?.status;
 
   const loadRepoDetails = useCallback(async () => {
@@ -119,7 +124,9 @@ export default function UserDashboardPage() {
 
   useEffect(() => {
     if (!repoId || !preferences.autoRefresh) return;
-    const shouldPoll = Boolean(repoStatus && repoStatus !== "COMPLETE" && repoStatus !== "FAILED");
+    const shouldPoll = Boolean(
+      repoStatus && !["COMPLETE", "FAILED", "CANCELLED"].includes(repoStatus)
+    );
     if (!shouldPoll) return;
 
     const interval = window.setInterval(() => void loadRepoDetails(), 3500);
@@ -127,10 +134,39 @@ export default function UserDashboardPage() {
   }, [loadRepoDetails, preferences.autoRefresh, repoId, repoStatus]);
 
   useEffect(() => {
-    if (repoStatus === "COMPLETE" || repoStatus === "FAILED") {
+    if (["COMPLETE", "FAILED", "CANCELLED"].includes(repoStatus ?? "")) {
       announceCreditsChanged();
     }
   }, [repoStatus]);
+
+  const cancelAnalysis = async () => {
+    if (!job || cancelling) return;
+    setCancelling(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/jobs/${encodeURIComponent(job.id)}/cancel`, {
+        method: "POST",
+      });
+      const payload = (await response.json()) as
+        | { success: true }
+        | { success: false; error: { message: string } };
+
+      if (!response.ok || !payload.success) {
+        throw new Error(
+          payload.success ? "Unable to cancel analysis" : payload.error.message
+        );
+      }
+
+      await loadRepoDetails();
+    } catch (cancelError) {
+      setError(
+        cancelError instanceof Error ? cancelError.message : "Unable to cancel analysis"
+      );
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   if (!repoId) return <RepositoryWorkspace />;
 
@@ -168,7 +204,7 @@ export default function UserDashboardPage() {
 
         {error && repo ? <div className="mt-5 border-l-2 border-[#a33f2b] bg-[#ead8cf] px-4 py-3 text-sm text-[#82331f]">{error}</div> : null}
 
-        {job && repo?.status !== "COMPLETE" && repo?.status !== "FAILED" ? (
+        {job && !["COMPLETE", "FAILED", "CANCELLED"].includes(repo?.status ?? "") ? (
           <div className="mt-7 border border-[#292721] bg-[#e8dfcf] p-5">
             <div className="flex items-center justify-between gap-3 text-sm">
               <p className="text-[#6d675f]">Current step: <span className="font-semibold text-[#292721]">{formatStatus(job.currentStep ?? "processing")}</span></p>
@@ -181,6 +217,17 @@ export default function UserDashboardPage() {
               {["Clone", "Map", "Understand", "Report"].map((step, index) => (
                 <div key={step} className={`border-t pt-2 font-mono text-[7px] uppercase tracking-[.1em] ${progress >= index * 25 ? "border-[#d75c3f] text-[#8c3826]" : "border-[#292721]/20 text-[#8a8378]"}`}>{step}</div>
               ))}
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => void cancelAnalysis()}
+                disabled={cancelling}
+                className="inline-flex h-9 items-center gap-2 border border-[#292721] px-3 font-mono text-[8px] uppercase tracking-[.12em] text-[#292721] transition hover:bg-[#292721] hover:text-[#f7f2e7] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {cancelling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
+                Cancel analysis
+              </button>
             </div>
           </div>
         ) : null}
@@ -209,11 +256,15 @@ export default function UserDashboardPage() {
 
       {analysisResult && repo ? (
         <RepositoryAnalysisReport repo={repo} analysis={analysisResult} />
-      ) : repo?.status === "FAILED" ? (
+      ) : repo?.status === "FAILED" || repo?.status === "CANCELLED" ? (
         <section className="border border-[#a33f2b] bg-[#ead8cf] p-6 sm:p-8">
           <p className="font-mono text-[8px] uppercase tracking-[.15em] text-[#82331f]">Analysis stopped</p>
-          <h3 className="mt-3 font-serif text-3xl tracking-[-.04em] text-[#292721]">This repository could not be analyzed.</h3>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#6d4a42]">{analysisFailureMessage(repo, job)}</p>
+          <h3 className="mt-3 font-serif text-3xl tracking-[-.04em] text-[#292721]">
+            {repo.status === "CANCELLED" ? "This analysis was cancelled." : "This repository could not be analyzed."}
+          </h3>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#6d4a42]">
+            {repo.status === "CANCELLED" ? "You can return to your workspace and start a new analysis whenever you are ready." : analysisFailureMessage(repo, job)}
+          </p>
           <Link href="/user/dashboard" className="mt-6 inline-flex h-11 items-center gap-2 bg-[#292721] px-5 text-xs font-medium text-[#f7f2e7] transition hover:bg-[#d75c3f]">
             <ArrowLeft className="h-3.5 w-3.5" /> Return and try again
           </Link>

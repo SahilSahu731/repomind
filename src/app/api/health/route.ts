@@ -7,7 +7,11 @@ import type {
   HealthState,
   ServiceHealth,
 } from "@/types/health";
-import IORedis from "ioredis";
+import IORedis, { type RedisOptions } from "ioredis";
+import {
+  ANALYSIS_WORKER_HEARTBEAT_KEY,
+  getBullMqConnectionOptions,
+} from "@/lib/queueConnection";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -42,19 +46,17 @@ async function checkAnalysisQueue(isLocalWorkspace: boolean): Promise<ServiceHea
     return {
       name: "Analysis engine",
       state: "operational",
-      detail: "Jobs are processed inline by this application instance.",
+      detail: "Development jobs are processed inline by this application instance.",
       latencyMs: null,
     };
   }
 
   return inspectService(
     "Analysis queue",
-    "The BullMQ Redis connection",
+    "The BullMQ Redis connection and analysis worker",
     async () => {
       const client = new IORedis({
-        host: env.REDIS_HOST,
-        port: env.REDIS_PORT,
-        ...(env.REDIS_PASSWORD ? { password: env.REDIS_PASSWORD } : {}),
+        ...(getBullMqConnectionOptions() as RedisOptions),
         lazyConnect: true,
         connectTimeout: 3_000,
         maxRetriesPerRequest: 0,
@@ -64,6 +66,12 @@ async function checkAnalysisQueue(isLocalWorkspace: boolean): Promise<ServiceHea
       try {
         await client.connect();
         await client.ping();
+        const heartbeat = await client.get(ANALYSIS_WORKER_HEARTBEAT_KEY);
+        if (!heartbeat) throw new Error("Analysis worker heartbeat is missing");
+        const ageMs = Date.now() - new Date(heartbeat).getTime();
+        if (!Number.isFinite(ageMs) || ageMs > 60_000) {
+          throw new Error("Analysis worker heartbeat is stale");
+        }
       } finally {
         client.disconnect();
       }

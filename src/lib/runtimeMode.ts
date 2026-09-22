@@ -34,5 +34,13 @@ export function hasConfiguredSupabaseDatabase(): boolean {
  * silently falls back to the filesystem when its database is misconfigured.
  */
 export function shouldUseLocalWorkspaceDatabase(): boolean {
-  return env.NODE_ENV !== "production" && !hasConfiguredSupabaseDatabase();
+  if (env.NODE_ENV === "production") {
+    return false;
+  }
+
+  if (env.WORKSPACE_DATABASE_MODE === "supabase") {
+    return false;
+  }
+
+  return true;
 }

@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (cached && !["COMPLETE", "FAILED"].includes(cached.status)) {
+    if (cached && !["COMPLETE", "FAILED", "CANCELLED"].includes(cached.status)) {
       const existingJob = await getLatestJobByRepoId(cached.id);
 
       if (existingJob && isActiveJobFresh(existingJob.updatedAt, existingJob.createdAt)) {
@@ -157,6 +157,9 @@ export async function POST(req: NextRequest) {
     const repoRow = await createRepo({
       userId: principal.id,
       githubUrl: normalizedUrl,
+      githubInstallationId: null,
+      githubRepositoryId: null,
+      isPrivate: false,
       owner,
       name: repo,
       branch,
@@ -176,6 +179,9 @@ export async function POST(req: NextRequest) {
         repoId: repoRow.id,
         jobId: jobRow.id,
         githubUrl: normalizedUrl,
+        githubInstallationId: null,
+        githubRepositoryId: null,
+        isPrivate: false,
         owner,
         repo,
         branch,
